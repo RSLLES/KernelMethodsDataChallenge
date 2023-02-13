@@ -1,1 +1,7 @@
 # KernelMethodsDataChallenge
+
+Directory structure :
+
+```
+
+```
