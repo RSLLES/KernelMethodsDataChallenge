@@ -4,8 +4,13 @@ from tqdm import tqdm
 
 def split_list(L: list, k: int):
     """
-    This function takes in a list, L, and an integer, k, and returns a list of sublists. The sublists are created by splitting the original list into k equal parts.
+    This function takes in a list, L, and an integer, k, and returns a list of sublists.
+    The sublists are created by splitting the original list into k equal parts.
+    It returns a list containing only the original list if k=1.
     """
+    assert k >= 1, "K must be >= 1"
+    if k == 1:
+        return [L]
     div = len(L) / k
     res = []
     for i in range(k):
@@ -18,9 +23,11 @@ def split_list(L: list, k: int):
 def all_except(L: list[list]):
     """
     This function takes in a list of lists (L) and returns a list containing the sum of all elements in L except for the elements at each index.
-
     For example, if L is [[1,2], [3,4], [5,6]], the function will return [[3,4,5,6], [1,2,5,6], [1,2,3,4]].
+    Note that if the given list contains only 1 element, this function returns [].
     """
+    if len(L) == 1:
+        return []
     rest = []
     for i in range(len(L)):
         rest.append(sum(L[:i] + L[i + 1 :], []))
@@ -28,7 +35,7 @@ def all_except(L: list[list]):
 
 
 class Dataset:
-    def __init__(self, X, Y=None, kernel=None, k_folds=2) -> None:
+    def __init__(self, X, Y=None, kernel=None, k_folds=1) -> None:
         assert Y is None or len(X) == len(Y), "X and Y must have the same length."
         self.n = len(X)
         self.x = X
@@ -83,14 +90,19 @@ class Dataset:
         if self.y is not None:
             y_test = self.y[idxs_test]
 
-        idxs_train = self.idxs_train[fold_idx]
-        K_train = self.K[np.ix_(idxs_train, idxs_train)]
-        if self.y is not None:
-            y_train = self.y[idxs_train]
+        if self.k_folds > 1:
+            idxs_train = self.idxs_train[fold_idx]
+            K_train = self.K[np.ix_(idxs_train, idxs_train)]
+            if self.y is not None:
+                y_train = self.y[idxs_train]
+
+            if self.y is not None:
+                return K_train, y_train, K_test, y_test
+            return K_train, None, K_test, None
 
         if self.y is not None:
-            return K_train, y_train, K_test, y_test
-        return K_train, K_test
+            return K_test, y_test, None, None
+        return K_test, None, None, None
 
     def __iter__(self):
         self.check_gram()
@@ -107,11 +119,14 @@ class Dataset:
 
 ### Unit Test ###
 if __name__ == "__main__":
+    from random import shuffle
+
     n = 10
-    k_folds = 3
+    k_folds = 2
 
     x = np.arange(10)
-    y = np.arange(10) % 2
+    y = x % 2
+    shuffle(y)
     print(f"x = {x}")
     print(f"y = {y}")
 
@@ -128,5 +143,7 @@ if __name__ == "__main__":
         print(f"##### Fold {fold+1} #####")
         print("K_train :")
         print(K_train)
+        print(f"with y_train = {y_train}")
         print("K_test :")
         print(K_test)
+        print(f"with y_test = {y_test}")
