@@ -36,11 +36,11 @@ def load_data(config):
 
     x = load_file(os.path.join(config.data_directory, config.x))
     y = load_file(os.path.join(config.data_directory, config.y))
-    ds = Dataset(x=x, y=y, prop_test=config.prop_test, k_folds=config.k_folds_cross_val)
+    ds = Dataset(X=x, Y=y, k_folds=config.k_folds_cross_val)
 
     if hasattr(config, "x_val"):
         x_val = load_file(os.path.join(config.data_directory, config.x_val))
-        ds_val = Dataset(x=x_val)
+        ds_val = Dataset(X=x_val)
         return ds, ds_val
 
     return ds
