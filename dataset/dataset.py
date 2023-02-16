@@ -120,6 +120,7 @@ class Dataset:
 ### Unit Test ###
 if __name__ == "__main__":
     from random import shuffle
+    from kernels.kernels import LinearKernel
 
     n = 10
     k_folds = 2
@@ -130,7 +131,7 @@ if __name__ == "__main__":
     print(f"x = {x}")
     print(f"y = {y}")
 
-    kernel = lambda x, y: x * y
+    kernel = LinearKernel()
     print("Kernel is linear")
 
     print(f"k_folds = {k_folds}")
