@@ -28,8 +28,8 @@ def all_except(L: list[list]):
 
 
 class Dataset:
-    def __init__(self, X, Y, kernel=None, k_folds=2) -> None:
-        assert len(X) == len(Y), "X and Y must have the same length."
+    def __init__(self, X, Y=None, kernel=None, k_folds=2) -> None:
+        assert Y is None or len(X) == len(Y), "X and Y must have the same length."
         self.n = len(X)
         self.x = X
         self.y = Y
@@ -80,13 +80,17 @@ class Dataset:
 
         idxs_test = self.idxs_test[fold_idx]
         K_test = self.K[np.ix_(idxs_test, idxs_test)]
-        y_test = self.y[idxs_test]
+        if self.y is not None:
+            y_test = self.y[idxs_test]
 
         idxs_train = self.idxs_train[fold_idx]
         K_train = self.K[np.ix_(idxs_train, idxs_train)]
-        y_train = self.y[idxs_train]
+        if self.y is not None:
+            y_train = self.y[idxs_train]
 
-        return K_train, y_train, K_test, y_test
+        if self.y is not None:
+            return K_train, y_train, K_test, y_test
+        return K_train, K_test
 
     def __iter__(self):
         self.check_gram()
