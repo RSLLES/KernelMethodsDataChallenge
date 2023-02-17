@@ -112,7 +112,7 @@ class SVC:
 
         # Inequality constraints in vector form
         _y = cvx.Parameter(shape=n, name='y', value=y)
-        _C = cvx.Parameter(shape=1, name='C', value=self.C)
+        _C = cvx.Parameter(name='C', value=self.C, nonneg=True)
         dual_constraints = [
             -alpha <= 0.,
             alpha <= _C,
@@ -142,4 +142,51 @@ class SVC:
             f_x0 = np.dot(self._separating_weights, self.kernel[support_idx][0][nonzero_alpha_idx])  # todo : check this
         self._offset = y[support_idx][0] - f_x0
         self._rkhs_norm = np.sqrt(np.dot(self._alpha, hess.value @ self._alpha))
-        
+
+
+def linear_kernel(X, Y):
+    return np.sum(X[:, None] * Y[None, :], axis=2)
+
+
+if __name__ == '__main__':
+    # test only dual problem formulation for now (not whole class)
+    x1 = [
+        [1.0, 1.0],
+        [0.5, 0.5],
+        [0., 0.5]
+    ]
+    y1 = [1, 1, 1]
+
+    x2 = [
+        [-1.0, -1.0],
+        [-0.5, -0.5],
+        [-0., -0.5]
+    ]
+    y2 = [-1, -1, -1]
+
+    X = np.array(x1 + x2)
+    y = np.array(y1 + y2)
+
+    C = 1.
+    n = len(y)
+    K = linear_kernel(X, X)
+    alpha = cvx.Variable(shape=n, name='alpha')  # alpha represents the dual variables
+    hess = cvx.Parameter(shape=(n, n),
+                         name='hessian',
+                         value=y[:, None] * K * y[None, :],  # diag(y) @ K @ diag(y)
+                         PSD=True)
+    dual_objective = cvx.Minimize(0.5 * cvx.quad_form(x=alpha, P=hess) - cvx.sum(alpha))
+
+    # Inequality constraints in vector form
+    _y = cvx.Parameter(shape=n, name='y', value=y)
+    _C = cvx.Parameter(name='C', value=C, nonneg=True)
+    dual_constraints = [
+        -alpha <= 0.,
+        alpha <= _C,
+        alpha @ _y == 0.,
+    ]
+
+    dual_problem = cvx.Problem(dual_objective, dual_constraints)
+    dual_problem.solve()
+
+    print(dual_problem.status)
