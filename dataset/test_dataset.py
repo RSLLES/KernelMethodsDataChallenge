@@ -9,7 +9,6 @@ class TestDataset(unittest.TestCase):
         x = np.arange(7)
         y = np.array([1, 0, 0, 1, 1, 0, 1])
         self.d = Dataset(X=x, Y=y, kernel=LinearKernel(), k_folds=3)
-        print("Hello")
         self.d.compute_gram_matrix()
 
     def test_gram_matrix(self):
