@@ -115,36 +115,3 @@ class Dataset:
         a = self.__getitem__(self.idx)
         self.idx += 1
         return a
-
-
-### Unit Test ###
-if __name__ == "__main__":
-    from random import shuffle
-    from kernels.kernels import LinearKernel
-
-    n = 10
-    k_folds = 2
-
-    x = np.arange(10)
-    y = x % 2
-    shuffle(y)
-    print(f"x = {x}")
-    print(f"y = {y}")
-
-    kernel = LinearKernel()
-    print("Kernel is linear")
-
-    print(f"k_folds = {k_folds}")
-
-    d = Dataset(X=x, Y=y, kernel=kernel, k_folds=k_folds)
-    d.compute_gram_matrix()
-    print("Full gram Matrix : ")
-    print(d.K)
-    for fold, (K_train, y_train, K_test, y_test) in enumerate(d):
-        print(f"##### Fold {fold+1} #####")
-        print("K_train :")
-        print(K_train)
-        print(f"with y_train = {y_train}")
-        print("K_test :")
-        print(K_test)
-        print(f"with y_test = {y_test}")
