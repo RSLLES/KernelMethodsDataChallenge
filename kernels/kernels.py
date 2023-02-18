@@ -7,7 +7,10 @@ class GaussianKernel:
         self.gamma = 1. / (2 * sigma**2)
 
     def __call__(self, x1, x2):
-        return np.exp(-self.gamma * np.linalg.norm(x1 - x2))
+        if hasattr(x1, 'ndim') and x1.ndim == 2:  # matrix case
+            return np.exp(-self.gamma * np.linalg.norm(x1[:, None] - x2[None, :], axis=2))
+        else:  # scalar or 1D array case
+            return np.exp(-self.gamma * np.linalg.norm(x1 - x2))
 
 
 class LinearKernel:
