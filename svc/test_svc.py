@@ -1,7 +1,7 @@
 import unittest
 from .svc import SVC
 import numpy as np
-from data.generate_dumb import gen_data
+from data.generate_dumb import gen_data, gen_linearly_separable_data
 import matplotlib.pyplot as plt
 
 
@@ -20,18 +20,25 @@ class SVCTest(unittest.TestCase):
         }
 
         for kernel_type in ['linear', 'polynomial', 'rbf']:
+            if kernel_type == 'linear':
+                X, y = gen_linearly_separable_data(300)
+                plt.scatter(X[y == 1, 0], X[y == 1, 1], c='tab:green')
+                plt.scatter(X[y == -1, 0], X[y == -1, 1], c='tab:red')
+                plt.show()
+            else:
+                X, y = self.X, self.y
             model = SVC(loss='hinge', penalty='l2', kernel=kernel_type, **kernel_params, verbose=True)
-            model.fit(self.X, self.y)
+            model.fit(X, y)
             self.assertEqual(model._opt_status, 'optimal')
             # uncomment for visual check (does not work well w/ linear kernel since data is not linearly separable)
-            # plot_2d_classif(self.X, self.y, model.predict(self.X), model)
+            plot_2d_classif(X, y, model.predict(X), model, bound=((-2., 2.), (-2., 2.)))
 
 
 def plot_hypersurface(ax, x_extent, model: SVC, intercept, color='grey', linestyle='-', alpha=1.):
     x_extent = np.linspace(x_extent[0], x_extent[1], 100)
     xx, yy = np.meshgrid(x_extent, x_extent)
     xy = np.vstack([xx.ravel(), yy.ravel()]).T
-    decision = model.decision_function(xy).reshape(xx.shape) + intercept
+    decision = model.decision_function(xy).reshape(xx.shape) - model._offset + intercept
     ax.contour(xx, yy, decision, colors=color, levels=[0.], alpha=alpha, linestyles=[linestyle])
 
 
@@ -39,7 +46,8 @@ def plot_2d_classif(X, ytrue, ypred, model: SVC, ax=None, bound=((-1., 1.), (-1.
     """
     Plot the SVC separation and margin for dummy 2D data
     """
-    ytrue = 1. * ytrue - 1. * ~ytrue
+    if ytrue.dtype == bool:
+        ytrue = 1. * ytrue - 1. * ~ytrue
     tp_mask = (ytrue == 1.) & (ypred == 1.)
     fp_mask = (ytrue == -1.) & (ypred == 1.)
     tn_mask = (ytrue == -1.) & (ypred == -1.)

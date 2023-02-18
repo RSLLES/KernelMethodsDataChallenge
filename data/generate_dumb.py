@@ -25,6 +25,32 @@ def gen_data(N):
     return X, Y
 
 
+def gen_linearly_separable_data(N,
+                                mu_positive: np.ndarray = np.array([1., 1.]),
+                                sigma_positive: float = 0.2,
+                                mu_negative: np.ndarray = np.array([-1., 0.]),
+                                sigma_negative: float = 0.2):
+    """
+    This function generates linearly separable Gaussian data for a binary classification problem.
+
+    :param N: number of points to generate (if odd, will generate N-1 points)
+    :param mu_positive: mean of the positive class
+    :param mu_negative: mean of the negative class
+    :param sigma_positive: 1D deviation of the positive class gaussian
+    :param sigma_negative: 1D deviation of the negative class gaussian
+    """
+    points_per_class = N // 2
+    positive_points = np.zeros(shape=(points_per_class, 2))
+    negative_points = np.zeros(shape=(points_per_class, 2))
+    for i in range(points_per_class):
+        positive_points[i] = mu_positive + np.random.randn(2) * sigma_positive
+        negative_points[i] = mu_negative + np.random.randn(2) * sigma_negative
+
+    y = np.concatenate((np.ones(points_per_class), -np.ones(points_per_class)))
+
+    return np.concatenate((positive_points, negative_points)), y
+
+
 def show(X, Y):
     plt.scatter(X[Y][:, 0], X[Y][:, 1], label="1")
     plt.scatter(X[np.invert(Y)][:, 0], X[np.invert(Y)][:, 1], label="0")
