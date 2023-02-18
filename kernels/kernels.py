@@ -12,4 +12,22 @@ class GaussianKernel:
 
 class LinearKernel:
     def __call__(self, x1, x2):
-        return np.sum(x1[:, None] * x2[None, :], axis=2)
+        # different behavior if inputs are matrices : compute the whole gram matrix at once
+        if hasattr(x1, 'ndim') and x1.ndim == 2:  # matrix case
+            return np.sum(x1[:, None] * x2[None, :], axis=2)
+        else:  # scalar or 1D array case
+            return np.dot(x1, x2)
+
+
+class PolynomialKernel:
+    def __init__(self, scale, offset, degree):
+        self.scale = scale
+        self.offset = offset
+        self.degree = degree
+
+    def __call__(self, x1, x2):
+        # different behavior if inputs are matrices : compute the whole gram matrix at once
+        if hasattr(x1, 'ndim') and x1.ndim == 2:  # matrix case
+            return np.power(np.sum(x1[:, None] * x2[None, :], axis=2) / self.scale + self.offset, self.degree)
+        else:  # scalar or 1D array case
+            return np.power(np.dot(x1, x2) / self.scale + self.offset, self.degree)
