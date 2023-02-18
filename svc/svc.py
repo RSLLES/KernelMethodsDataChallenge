@@ -2,7 +2,7 @@ import numpy as np
 import cvxpy as cvx
 import sys
 from typing import Union, Callable, Optional
-from kernels.kernels import LinearKernel, GaussianKernel
+from kernels.kernels import LinearKernel, GaussianKernel, PolynomialKernel
 
 
 class SVC:
@@ -59,7 +59,14 @@ class SVC:
         if self.kernel == 'linear':
             self.kernel = LinearKernel()
         if self.kernel == 'rbf':
+            if self.rbf_gamma is None:
+                raise ValueError('Requested kernel \'rbf\', but argument \'rbf_gamma\' was not provided')
             self.kernel = GaussianKernel(sigma=1. / np.sqrt(2 * self.rbf_gamma))
+        if self.kernel == 'polynomial':
+            if self.poly_scale is None or self.poly_offset is None or self.poly_degree is None:
+                raise ValueError('Requested kernel \'polynomial\', but arguments '
+                                 '\'poly_scale\', \'poly_offset\' and \'poly_degree\' were not provided')
+            self.kernel = PolynomialKernel(self.poly_scale, self.poly_offset, self.poly_degree)
 
     def fit(self, X, y):
         if self.loss == 'hinge' and self.penalty == 'l2':
