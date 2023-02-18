@@ -2,6 +2,7 @@ import numpy as np
 import cvxpy as cvx
 import sys
 from typing import Union, Callable, Optional
+from kernels.kernels import LinearKernel, GaussianKernel
 
 
 class SVC:
@@ -37,12 +38,12 @@ class SVC:
         :param rbf_gamma: the 'gamma' factor in the RBF kernel. Lower means distances get shrunk,
          resulting in softer classification. Ignored if kernel is not 'rbf'
         :param poly_scale: the 'a' factor in the polynomial kernel. Must be non-negative. Values < 1 dilate the
-        distance, values > 1 shrink the distance. Ignored if kernel is not 'polynomial'
+         distance, values > 1 shrink the distance. Ignored if kernel is not 'polynomial'
         :param poly_offset: the 'c' factor in the polynomial kernel. Must be non-negative. Higher values tend to
-        smoother classification (prevents overfitting but may smoothen "too much").
-        Ignored if kernel is not 'polynomial'
+         smoother classification (prevents overfitting but may smoothen "too much").
+         Ignored if kernel is not 'polynomial'
         :param poly_degree: the 'd' factor in the polynomial kernel. Higher means small distances get shrunk and large
-        distances get dilated. Ignored if kernel is not 'polynomial'
+         distances get dilated. Ignored if kernel is not 'polynomial'
         """
         self.C = C
         self.loss = loss.lower()
@@ -54,12 +55,16 @@ class SVC:
         self.poly_offset = poly_offset
         self.poly_degree = poly_degree
         self.verbose = verbose
-        raise NotImplementedError
+
+        if self.kernel == 'linear':
+            self.kernel = LinearKernel()
+        if self.kernel == 'rbf':
+            self.kernel = GaussianKernel(sigma=1. / np.sqrt(2 * self.rbf_gamma))
 
     def fit(self, X, y):
         if self.loss == 'hinge' and self.penalty == 'l2':
             self._fit_l2_hinge(X, y)
-        raise NotImplementedError
+        # todo : other cases !
 
     def predict(self, X) -> np.ndarray:
         """
@@ -129,7 +134,7 @@ class SVC:
         self._alpha = alpha.value
         # now, get vectors needed for separation
         nonzero_alpha_idx = self._alpha > self.epsilon
-        support_idx = nonzero_alpha_idx & self._alpha < (self.C - self.epsilon)
+        support_idx = nonzero_alpha_idx & (self._alpha < (self.C - self.epsilon))
         # if kernel='precomputed', store the indices instead of the vectors (we don't have the vectors)
         self._support_vecs = X[support_idx] if self.kernel != 'precomputed' else support_idx
         self._separating_weights = self._alpha[nonzero_alpha_idx] * y[nonzero_alpha_idx]
@@ -143,50 +148,5 @@ class SVC:
         self._offset = y[support_idx][0] - f_x0
         self._rkhs_norm = np.sqrt(np.dot(self._alpha, hess.value @ self._alpha))
 
-
-def linear_kernel(X, Y):
-    return np.sum(X[:, None] * Y[None, :], axis=2)
-
-
-if __name__ == '__main__':
-    # test only dual problem formulation for now (not whole class)
-    x1 = [
-        [1.0, 1.0],
-        [0.5, 0.5],
-        [0., 0.5]
-    ]
-    y1 = [1, 1, 1]
-
-    x2 = [
-        [-1.0, -1.0],
-        [-0.5, -0.5],
-        [-0., -0.5]
-    ]
-    y2 = [-1, -1, -1]
-
-    X = np.array(x1 + x2)
-    y = np.array(y1 + y2)
-
-    C = 1.
-    n = len(y)
-    K = linear_kernel(X, X)
-    alpha = cvx.Variable(shape=n, name='alpha')  # alpha represents the dual variables
-    hess = cvx.Parameter(shape=(n, n),
-                         name='hessian',
-                         value=y[:, None] * K * y[None, :],  # diag(y) @ K @ diag(y)
-                         PSD=True)
-    dual_objective = cvx.Minimize(0.5 * cvx.quad_form(x=alpha, P=hess) - cvx.sum(alpha))
-
-    # Inequality constraints in vector form
-    _y = cvx.Parameter(shape=n, name='y', value=y)
-    _C = cvx.Parameter(name='C', value=C, nonneg=True)
-    dual_constraints = [
-        -alpha <= 0.,
-        alpha <= _C,
-        alpha @ _y == 0.,
-    ]
-
-    dual_problem = cvx.Problem(dual_objective, dual_constraints)
-    dual_problem.solve()
-
-    print(dual_problem.status)
+    def score(self, X, y):
+        raise NotImplementedError
