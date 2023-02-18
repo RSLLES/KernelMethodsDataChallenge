@@ -1,5 +1,6 @@
 import numpy as np
 from tqdm import tqdm
+from typing import List
 
 
 def split_list(L: list, k: int):
@@ -20,7 +21,7 @@ def split_list(L: list, k: int):
     return res
 
 
-def all_except(L: list[list]):
+def all_except(L: List[list]):
     """
     This function takes in a list of lists (L) and returns a list containing the sum of all elements in L except for the elements at each index.
     For example, if L is [[1,2], [3,4], [5,6]], the function will return [[3,4,5,6], [1,2,5,6], [1,2,3,4]].
