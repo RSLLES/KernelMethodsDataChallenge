@@ -195,5 +195,32 @@ class SVC:
         self._offset = y[support_idx][0] - f_x0
         self._rkhs_norm = np.sqrt(np.dot(self._alpha, hess.value @ self._alpha))
 
-    def score(self, X, y):
-        raise NotImplementedError
+    def score(self, X: np.ndarray, y: np.ndarray, score_type: Optional[str] = None):
+        """
+        Compute accuracy, precision and recall, or one of them.
+
+        :param X: the samples to predict labels of
+        :param y: the ground-truth labels of X
+        :param score_type: 'accuracy', 'precision' or 'recall' to select which score to compute
+        :return: a tuple of length 3 : (accuracy, precision, recall) or one of them if 'score_type' was passed
+        """
+        score = score_type.lower() if score_type else None
+        y_pred = self.predict(X)
+
+        tp = np.sum(y_pred & y)
+        tn = np.sum(~y_pred & ~y)
+        fp = np.sum(y_pred & ~y)
+        fn = np.sum(~y_pred & y)
+
+        accuracy = (tp + tn) / (tp + tn + fp + fn)
+        precision = tp / (tp + fp)
+        recall = tp / (tp + fn)
+
+        if score == 'accuracy':
+            return accuracy
+        if score == 'precision':
+            return precision
+        if score == 'recall':
+            return recall
+
+        return accuracy, precision, recall
