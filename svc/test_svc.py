@@ -2,10 +2,12 @@ import unittest
 from .svc import SVC
 from data.generate_dumb import gen_data, gen_linearly_separable_data
 from kernels.kernels import GaussianKernel
+import numpy as np
 
 
 class SVCTest(unittest.TestCase):
     def setUp(self) -> None:
+        np.random.seed(0)
         X, Y = gen_data(300)
         self.X = X
         self.y = Y
