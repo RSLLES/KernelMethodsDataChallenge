@@ -36,6 +36,15 @@ def all_except(L: List[list]):
 
 
 class Dataset:
+    """
+    This function defines a dataset that can be iterated over.
+    It returns two matrices, K_train and K_test, and two label vectors, y_train and y_test,
+    for each fold in the cross-validation process.
+    Note that it can be initialized with Y=None to support unsupervised learning,
+    and with k_folds=1 to return only training data.
+    (in this case, K_test and y_test will be set to None).
+    """
+
     def __init__(self, X, Y=None, kernel=None, k_folds=1) -> None:
         assert Y is None or len(X) == len(Y), "X and Y must have the same length."
         self.n = len(X)
@@ -86,24 +95,25 @@ class Dataset:
         if not (0 <= fold_idx and fold_idx < self.__len__()):
             raise IndexError(f"Index {fold_idx} is incorrect.")
 
-        idxs_test = self.idxs_test[fold_idx]
-        K_test = self.K[np.ix_(idxs_test, idxs_test)]
-        if self.y is not None:
-            y_test = self.y[idxs_test]
-
-        if self.k_folds > 1:
+        # Define idxs
+        if self.k_folds == 1:  # Test become train in this scenario
+            idxs_train = self.idxs_test[fold_idx]
+        else:
+            idxs_test = self.idxs_test[fold_idx]
             idxs_train = self.idxs_train[fold_idx]
-            K_train = self.K[np.ix_(idxs_train, idxs_train)]
-            if self.y is not None:
-                y_train = self.y[idxs_train]
 
-            if self.y is not None:
-                return K_train, y_train, K_test, y_test
-            return K_train, None, K_test, None
+        # Around train
+        K_train = self.K[np.ix_(idxs_train, idxs_train)]
+        y_train = self.y[idxs_train] if self.y is not None else None
 
-        if self.y is not None:
-            return K_test, y_test, None, None
-        return K_test, None, None, None
+        if self.k_folds == 1:
+            return K_train, y_train, None, None
+
+        # Around test
+        K_test = self.K[np.ix_(idxs_test, idxs_train)]
+        y_test = self.y[idxs_test] if self.y is not None else None
+
+        return K_train, y_train, K_test, y_test
 
     def __iter__(self):
         self.check_gram()
