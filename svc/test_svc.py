@@ -1,6 +1,7 @@
 import unittest
 from .svc import SVC
 from data.generate_dumb import gen_data, gen_linearly_separable_data
+from kernels.kernels import GaussianKernel
 
 
 class SVCTest(unittest.TestCase):
@@ -26,5 +27,20 @@ class SVCTest(unittest.TestCase):
             model.fit(X, y)
             self.assertEqual(model._opt_status, 'optimal')
             # uncomment for visual check (does not work well w/ linear kernel since data is not linearly separable)
-            # (do 'from plotting import plot_2d_classif')
+            # from .plotting import plot_2d_classif
             # plot_2d_classif(X, y, model.predict(X), model, bound=((-2., 2.), (-2., 2.)))
+
+    def test_precomp_kernel(self):
+        """
+        This just needs to run without errors.
+        """
+        kernel_func = GaussianKernel(sigma=2)
+        K_full = kernel_func(self.X, self.X)
+        K_train = K_full[:250, :250]
+        X_test = self.X[250:]
+
+        model = SVC(loss='hinge', penalty='l2', kernel=kernel_func, precomputed_kernel=K_train)
+        model.fit(self.X[:250], self.y[:250])
+        model.predict(X_test)
+        # from .plotting import plot_2d_classif
+        # plot_2d_classif(self.X, self.y, model.predict(self.X), model)

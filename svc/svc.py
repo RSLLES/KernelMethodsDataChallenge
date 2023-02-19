@@ -60,22 +60,23 @@ class SVC:
         self.precomputed_kernel = precomputed_kernel
         self.verbose = verbose
 
-        if self.kernel == 'linear':
-            self.kernel = LinearKernel()
+        if isinstance(self.kernel, str):
+            if self.kernel == 'linear':
+                self.kernel = LinearKernel()
 
-        elif self.kernel == 'rbf':
-            if self.rbf_gamma is None:
-                raise ValueError('Requested kernel \'rbf\', but argument \'rbf_gamma\' was not provided')
-            self.kernel = GaussianKernel(sigma=1. / np.sqrt(2 * self.rbf_gamma))
+            elif self.kernel == 'rbf':
+                if self.rbf_gamma is None:
+                    raise ValueError('Requested kernel \'rbf\', but argument \'rbf_gamma\' was not provided')
+                self.kernel = GaussianKernel(sigma=1. / np.sqrt(2 * self.rbf_gamma))
 
-        elif self.kernel == 'polynomial':
-            if self.poly_scale is None or self.poly_offset is None or self.poly_degree is None:
-                raise ValueError('Requested kernel \'polynomial\', but arguments '
-                                 '\'poly_scale\', \'poly_offset\' and \'poly_degree\' were not provided')
-            self.kernel = PolynomialKernel(self.poly_scale, self.poly_offset, self.poly_degree)
+            elif self.kernel == 'polynomial':
+                if self.poly_scale is None or self.poly_offset is None or self.poly_degree is None:
+                    raise ValueError('Requested kernel \'polynomial\', but arguments '
+                                     '\'poly_scale\', \'poly_offset\' and \'poly_degree\' were not provided')
+                self.kernel = PolynomialKernel(self.poly_scale, self.poly_offset, self.poly_degree)
 
-        else:
-            raise ValueError(f'Unknown kernel : \'{kernel}\'')
+            else:
+                raise ValueError(f'Unknown kernel : \'{kernel}\'')
 
     def fit(self, X, y):
         # assumption : X *always* contains samples (i.e. X[0] is the first sample and so on)
@@ -110,7 +111,7 @@ class SVC:
         :param X: the matrix of samples passed in the fit() method
         :return: either the precomputed kernel if we have one, otherwise, compute the kernel and return it
         """
-        if self.precomputed_kernel:
+        if self.precomputed_kernel is not None:
             if not self.precomputed_kernel.shape[0] == self.precomputed_kernel.shape[1] == len(X):
                 raise ValueError(f'Shape mistmatch : a precomputed kernel of shape {self.precomputed_kernel.shape} '
                                  f'was given, but {len(X)} training samples were provided. Either the kernel is '
