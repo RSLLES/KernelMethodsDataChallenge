@@ -51,6 +51,39 @@ def gen_linearly_separable_data(N,
     return np.concatenate((positive_points, negative_points)), y
 
 
+def gen_circles(N, n_circles):
+    """
+    Generate N 2D data points in the shape of concentric circles.
+
+    :param N: number of points
+    :param n_circles: number of circles to draw
+    :return: an array of shape (N, 2) containing the points, and an array of integers of shape (N,)
+     containing the labels (index of circle of the corresponding point)
+    """
+    points = np.zeros((N, 2), dtype=np.float32)
+    labels = np.zeros(N, dtype=int)
+    start_radius = 1.
+    points_per_circle = N // n_circles
+    for i in range(n_circles):
+        radius = start_radius + i
+        theta = np.linspace(0., 2 * np.pi, num=points_per_circle, endpoint=False)
+        theta += 0.01 * np.random.randn(len(theta))
+        r = np.full(shape=points_per_circle, fill_value=radius) + 0.05 * np.random.randn(points_per_circle)
+        points[i * points_per_circle:(i+1) * points_per_circle, 0] = r * np.cos(theta)
+        points[i * points_per_circle:(i+1) * points_per_circle, 1] = r * np.sin(theta)
+        labels[i * points_per_circle:(i+1) * points_per_circle] = i
+
+    # just forward fill the end of the array
+    remaining_points = N % n_circles
+    for i in range(remaining_points):
+        curr_idx = n_circles * points_per_circle + i
+        points[curr_idx, 0] = points[curr_idx - 1, 0]
+        points[curr_idx, 1] = points[curr_idx - 1, 1]
+        labels[curr_idx] = n_circles - 1
+
+    return points, labels
+
+
 def show(X, Y):
     plt.scatter(X[Y][:, 0], X[Y][:, 1], label="1")
     plt.scatter(X[np.invert(Y)][:, 0], X[np.invert(Y)][:, 1], label="0")
