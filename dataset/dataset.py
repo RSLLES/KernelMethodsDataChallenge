@@ -38,19 +38,18 @@ def all_except(L: List[list]):
 class Dataset:
     """
     This function defines a dataset that can be iterated over.
-    It returns two matrices, K_train and K_test, and two label vectors, y_train and y_test,
+    It returns two data vectors, X_train and X_test, and two label vectors, y_train and y_test,
     for each fold in the cross-validation process.
     Note that it can be initialized with Y=None to support unsupervised learning,
     and with k_folds=1 to return only training data.
-    (in this case, K_test and y_test will be set to None).
+    (in this case, X_test and y_test will be set to None).
     """
 
-    def __init__(self, X, Y=None, kernel=None, k_folds=1) -> None:
-        assert Y is None or len(X) == len(Y), "X and Y must have the same length."
+    def __init__(self, X, y=None, k_folds=1) -> None:
+        assert y is None or len(X) == len(y), "X and Y must have the same length."
         self.n = len(X)
-        self.x = X
-        self.y = Y
-        self.kernel = kernel
+        self.X = X
+        self.y = y
         self.k_folds = k_folds
 
         # Cross validation
@@ -58,40 +57,10 @@ class Dataset:
         self.idxs_test = split_list(idxs, k=self.k_folds)
         self.idxs_train = all_except(self.idxs_test)
 
-    def compute_gram_matrix(self, kernel=None):
-        if kernel is not None and self.kernel is not None and self.kernel != kernel:
-            print(
-                f"Warning : provide kernel '{kernel}' as argument will replace kernel '{self.kernel}' specified during initialization."
-            )
-            self.kernel = kernel
-
-        self.K = np.zeros((self.n, self.n))
-
-        with tqdm(
-            list(range(self.n * (self.n + 1) // 2)), desc="Computing Gram Matrix"
-        ) as pbar:
-            for i in range(self.n):
-                for j in range(i + 1):
-                    self.K[i, j] = self.kernel(self.x[i], self.x[j])
-                    self.K[j, i] = self.K[i, j]
-                    pbar.update(1)
-
-    def check_gram(self):
-        if not hasattr(self, "K"):
-            self.compute_gram_matrix()
-
     def __len__(self):
         return self.k_folds
 
     def __getitem__(self, fold_idx):
-        """
-        Returns for the given fold
-        the Gram matrix for training K_train,
-        the ground-truth labels for training y_train,
-        the Gram matrix for testing K_train and
-        the ground-truth labels for testing y_train.
-        """
-        self.check_gram()
         if not (0 <= fold_idx and fold_idx < self.__len__()):
             raise IndexError(f"Index {fold_idx} is incorrect.")
 
@@ -103,20 +72,19 @@ class Dataset:
             idxs_train = self.idxs_train[fold_idx]
 
         # Around train
-        K_train = self.K[np.ix_(idxs_train, idxs_train)]
+        X_train = self.X[idxs_train]
         y_train = self.y[idxs_train] if self.y is not None else None
 
         if self.k_folds == 1:
-            return K_train, y_train, None, None
+            return X_train, y_train, None, None
 
         # Around test
-        K_test = self.K[np.ix_(idxs_test, idxs_train)]
+        X_test = self.X[idxs_test]
         y_test = self.y[idxs_test] if self.y is not None else None
 
-        return K_train, y_train, K_test, y_test
+        return X_train, y_train, X_test, y_test
 
     def __iter__(self):
-        self.check_gram()
         self.idx = 0
         return self
 
