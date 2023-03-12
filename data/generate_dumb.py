@@ -25,11 +25,13 @@ def gen_data(N):
     return X, Y
 
 
-def gen_linearly_separable_data(N,
-                                mu_positive: np.ndarray = np.array([1., 1.]),
-                                sigma_positive: float = 0.2,
-                                mu_negative: np.ndarray = np.array([-1., 0.]),
-                                sigma_negative: float = 0.2):
+def gen_linearly_separable_data(
+    N,
+    mu_positive: np.ndarray = np.array([0.5, 0.0]),
+    sigma_positive: float = 0.2,
+    mu_negative: np.ndarray = np.array([-0.5, 0.0]),
+    sigma_negative: float = 0.2,
+):
     """
     This function generates linearly separable Gaussian data for a binary classification problem.
 
@@ -46,9 +48,9 @@ def gen_linearly_separable_data(N,
         positive_points[i] = mu_positive + np.random.randn(2) * sigma_positive
         negative_points[i] = mu_negative + np.random.randn(2) * sigma_negative
 
-    y = np.concatenate((np.ones(points_per_class), -np.ones(points_per_class)))
+    y = np.concatenate((np.ones(points_per_class), np.zeros(points_per_class)))
 
-    return np.concatenate((positive_points, negative_points)), y
+    return np.concatenate((positive_points, negative_points)), y.astype(bool)
 
 
 def gen_circles(N, n_circles):
@@ -62,16 +64,22 @@ def gen_circles(N, n_circles):
     """
     points = np.zeros((N, 2), dtype=np.float32)
     labels = np.zeros(N, dtype=int)
-    start_radius = 1.
+    start_radius = 1.0
     points_per_circle = N // n_circles
     for i in range(n_circles):
         radius = start_radius + i
-        theta = np.linspace(0., 2 * np.pi, num=points_per_circle, endpoint=False)
+        theta = np.linspace(0.0, 2 * np.pi, num=points_per_circle, endpoint=False)
         theta += 0.01 * np.random.randn(len(theta))
-        r = np.full(shape=points_per_circle, fill_value=radius) + 0.05 * np.random.randn(points_per_circle)
-        points[i * points_per_circle:(i+1) * points_per_circle, 0] = r * np.cos(theta)
-        points[i * points_per_circle:(i+1) * points_per_circle, 1] = r * np.sin(theta)
-        labels[i * points_per_circle:(i+1) * points_per_circle] = i
+        r = np.full(
+            shape=points_per_circle, fill_value=radius
+        ) + 0.05 * np.random.randn(points_per_circle)
+        points[i * points_per_circle : (i + 1) * points_per_circle, 0] = r * np.cos(
+            theta
+        )
+        points[i * points_per_circle : (i + 1) * points_per_circle, 1] = r * np.sin(
+            theta
+        )
+        labels[i * points_per_circle : (i + 1) * points_per_circle] = i
 
     # just forward fill the end of the array
     remaining_points = N % n_circles

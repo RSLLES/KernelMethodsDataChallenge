@@ -165,10 +165,13 @@ class SVC:
         Compute accuracy, precision and recall, or one of them.
 
         :param X: the samples to predict labels of
-        :param y: the ground-truth labels of X
+        :param y: the ground-truth labels of X (should be a binary array)
         :param score_type: 'accuracy', 'precision' or 'recall' to select which score to compute
         :return: a tuple of length 3 : (accuracy, precision, recall) or one of them if 'score_type' was passed
         """
+        if y.dtype != bool:
+            raise ValueError(f"y should be a binary array, found type {y.dtype}.")
+
         score = score_type.lower() if score_type else None
         y_pred = self.predict(X)
 
