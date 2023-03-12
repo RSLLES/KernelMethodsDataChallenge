@@ -1,48 +1,38 @@
 import unittest
 from .svc import SVC
 from data.generate_dumb import gen_data, gen_linearly_separable_data
-from kernels.kernels import GaussianKernel
+from kernels.kernels import GaussianKernel, LinearKernel, PolynomialKernel
+from dataset.dataset import Dataset
 import numpy as np
 
 
 class SVCTest(unittest.TestCase):
-    def setUp(self) -> None:
+    def setUp(self):
         np.random.seed(0)
-        X, Y = gen_data(300)
-        self.X = X
-        self.y = Y
+        self.tests = [
+            [LinearKernel(), gen_linearly_separable_data(300)],
+            [GaussianKernel(sigma=1), gen_data(300)],
+            [PolynomialKernel(scale=1.0, offset=0.1, degree=2), gen_data(300)],
+        ]
 
-    def test_l2_hinge(self):
-        kernel_params = {
-            'poly_scale': 1.,
-            'poly_offset': 0.1,
-            'poly_degree': 2,
-            'rbf_gamma': 0.5,
-        }
+    def test_svc(self):
+        for kernel, (X, y) in self.tests:
+            print(f"Test with {kernel.__class__.__name__}")
+            ds = Dataset(X=X, y=y, k_folds=3)
+            for k, (X, y, X_test, y_test) in enumerate(ds):
+                model = SVC(kernel=kernel)
+                model.fit(X=X, y=y)
+                self.assertEqual(model._opt_status, "optimal")
+                accuracy, precision, recall = model.score(
+                    X=X_test, y=y_test.astype(bool)
+                )
+                print(
+                    f"Fold {k} : Accuracy = {100*accuracy:0.2f}%, Precision = {100*precision:0.2f}%, Recall = {100*recall:0.2f}%"
+                )
 
-        for kernel_type in ['linear', 'polynomial', 'rbf']:
-            if kernel_type == 'linear':
-                X, y = gen_linearly_separable_data(300)
-            else:
-                X, y = self.X, self.y
-            model = SVC(loss='hinge', penalty='l2', kernel=kernel_type, **kernel_params, verbose=True)
-            model.fit(X, y)
-            self.assertEqual(model._opt_status, 'optimal')
             # uncomment for visual check (does not work well w/ linear kernel since data is not linearly separable)
             # from .plotting import plot_2d_classif
-            # plot_2d_classif(X, y, model.predict(X), model, bound=((-2., 2.), (-2., 2.)))
 
-    def test_precomp_kernel(self):
-        """
-        This just needs to run without errors.
-        """
-        kernel_func = GaussianKernel(sigma=2)
-        K_full = kernel_func(self.X, self.X)
-        K_train = K_full[:250, :250]
-        X_test = self.X[250:]
-
-        model = SVC(loss='hinge', penalty='l2', kernel=kernel_func, precomputed_kernel=K_train)
-        model.fit(self.X[:250], self.y[:250])
-        model.predict(X_test)
-        # from .plotting import plot_2d_classif
-        # plot_2d_classif(self.X, self.y, model.predict(self.X), model)
+            # plot_2d_classif(
+            #     X, y, model.predict(X), model, bound=((-2.0, 2.0), (-2.0, 2.0))
+            # )
