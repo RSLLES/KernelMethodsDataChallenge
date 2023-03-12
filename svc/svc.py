@@ -53,7 +53,7 @@ class SVC:
         :param X: The data points to classify
         :return: a vector containing the label value (0/1) for each data point
         """
-        return 2 * (self.decision_function(X) > 0) - 1
+        return (self.decision_function(X) > 0).astype(int)
 
     def decision_function(self, X: np.ndarray) -> np.ndarray:
         """
