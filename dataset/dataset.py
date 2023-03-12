@@ -1,5 +1,4 @@
-import numpy as np
-from tqdm import tqdm
+import random
 from typing import List
 
 
@@ -45,7 +44,7 @@ class Dataset:
     (in this case, X_test and y_test will be set to None).
     """
 
-    def __init__(self, X, y=None, k_folds=1) -> None:
+    def __init__(self, X, y=None, k_folds=1, shuffle=False) -> None:
         assert y is None or len(X) == len(y), "X and Y must have the same length."
         self.n = len(X)
         self.X = X
@@ -54,6 +53,8 @@ class Dataset:
 
         # Cross validation
         idxs = list(range(len(X)))
+        if shuffle:
+            random.shuffle(idxs)
         self.idxs_test = split_list(idxs, k=self.k_folds)
         self.idxs_train = all_except(self.idxs_test)
 

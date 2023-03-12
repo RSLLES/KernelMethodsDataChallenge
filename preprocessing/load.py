@@ -36,7 +36,7 @@ def load_data(config):
 
     x = load_file(os.path.join(config.data_directory, config.x))
     y = load_file(os.path.join(config.data_directory, config.y))
-    ds = Dataset(X=x, Y=y, k_folds=config.k_folds_cross_val)
+    ds = Dataset(X=x, y=y, k_folds=config.k_folds_cross_val)
 
     if hasattr(config, "x_val"):
         x_val = load_file(os.path.join(config.data_directory, config.x_val))
