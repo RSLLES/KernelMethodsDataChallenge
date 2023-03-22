@@ -73,15 +73,15 @@ class Dataset:
             idxs_train = self.idxs_train[fold_idx]
 
         # Around train
-        X_train = self.X[idxs_train]
-        y_train = self.y[idxs_train] if self.y is not None else None
+        X_train = [self.X[i] for i in idxs_train]
+        y_train = [self.y[i] for i in idxs_train] if self.y is not None else None
 
         if self.k_folds == 1:
             return X_train, y_train, None, None
 
         # Around test
-        X_test = self.X[idxs_test]
-        y_test = self.y[idxs_test] if self.y is not None else None
+        X_test = [self.X[i] for i in idxs_test]
+        y_test = [self.y[i] for i in idxs_test] if self.y is not None else None
 
         return X_train, y_train, X_test, y_test
 
