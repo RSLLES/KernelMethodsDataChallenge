@@ -1,5 +1,6 @@
 import unittest
 import networkx as nx
+import numpy as np
 
 from kernels.WL import WeisfeilerLehmanKernel
 
@@ -61,11 +62,9 @@ class TestWeisfeilerLehmanKernel(unittest.TestCase):
         self.assertEqual(computed_kernel_value, 11)
 
     def test_kernel_computation_list_of_graphs(self):
-        expected_kernel_values = [[16, 11], [11, 14]]
+        expected_kernel_values = np.array([[16, 11], [11, 14]])
 
-        computed_kernel_values_without_cache = self.kernel(
-            self.graphs, self.graphs, use_cache=False
-        )
-        computed_kernel_values = self.kernel(self.graphs, self.graphs)
-        self.assertEqual(computed_kernel_values_without_cache, expected_kernel_values)
-        self.assertEqual(computed_kernel_values, expected_kernel_values)
+        kernel_values_wto_cache = self.kernel(self.graphs, self.graphs, use_cache=False)
+        kernel_values = self.kernel(self.graphs, self.graphs)
+        np.testing.assert_almost_equal(kernel_values_wto_cache, expected_kernel_values)
+        np.testing.assert_almost_equal(kernel_values, expected_kernel_values)
