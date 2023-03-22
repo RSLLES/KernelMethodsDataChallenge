@@ -1,34 +1,67 @@
 import unittest
+import networkx as nx
 
 from kernels.WL import WeisfeilerLehmanKernel
 
 
+def G1():
+    g = nx.Graph(
+        [
+            (1, 2),
+            (1, 3),
+            (1, 4),
+            (2, 4),
+            (3, 4),
+            (3, 5),
+            (3, 6),
+        ]
+    )
+
+    g.nodes[1]["labels"] = [5]
+    g.nodes[2]["labels"] = [2]
+    g.nodes[3]["labels"] = [4]
+    g.nodes[4]["labels"] = [3]
+    g.nodes[5]["labels"] = [1]
+    g.nodes[6]["labels"] = [1]
+
+    return g
+
+
+def G2():
+    g = nx.Graph(
+        [
+            (1, 2),
+            (1, 3),
+            (2, 3),
+            (2, 4),
+            (3, 4),
+            (3, 5),
+            (4, 6),
+        ]
+    )
+
+    g.nodes[1]["labels"] = [2]
+    g.nodes[2]["labels"] = [5]
+    g.nodes[3]["labels"] = [4]
+    g.nodes[4]["labels"] = [3]
+    g.nodes[5]["labels"] = [1]
+    g.nodes[6]["labels"] = [2]
+
+    return g
+
+
 class TestWeisfeilerLehmanKernel(unittest.TestCase):
     def setUp(self) -> None:
-        from preprocessing.load import load_file
-
-        self.graphs = load_file("data/training_data.pkl")[0:10]
-        self.kernel = WeisfeilerLehmanKernel(depth=3)
+        self.graphs = [G1(), G2()]
+        self.kernel = WeisfeilerLehmanKernel(depth=1)
 
     def test_kernel_computation_single_graph(self):
-        g1 = self.graphs[0]
-        g2 = self.graphs[2]
+        g1, g2 = self.graphs[0], self.graphs[1]
         computed_kernel_value = self.kernel(g1, g2, use_cache=False)
-        self.assertEqual(computed_kernel_value, 215)
+        self.assertEqual(computed_kernel_value, 11)
 
     def test_kernel_computation_list_of_graphs(self):
-        expected_kernel_values = [
-            [264, 322, 215, 420, 385, 255, 248, 284, 175, 312],
-            [322, 654, 328, 767, 622, 496, 478, 478, 271, 484],
-            [215, 328, 274, 441, 382, 271, 253, 278, 189, 346],
-            [420, 767, 441, 1212, 799, 624, 596, 595, 379, 680],
-            [385, 622, 382, 799, 858, 510, 480, 512, 384, 652],
-            [255, 496, 271, 624, 510, 494, 387, 365, 234, 412],
-            [248, 478, 253, 596, 480, 387, 422, 381, 221, 390],
-            [284, 478, 278, 595, 512, 365, 381, 524, 261, 452],
-            [175, 271, 189, 379, 384, 234, 221, 261, 380, 558],
-            [312, 484, 346, 680, 652, 412, 390, 452, 558, 1056],
-        ]
+        expected_kernel_values = [[16, 11], [11, 14]]
 
         computed_kernel_values_without_cache = self.kernel(
             self.graphs, self.graphs, use_cache=False
