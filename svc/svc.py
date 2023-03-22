@@ -1,8 +1,10 @@
 import numpy as np
 import cvxpy as cvx
 import sys
-from typing import Union, Callable, Optional
+from typing import Union, Callable, Optional, List
 from kernels.kernels import LinearKernel, GaussianKernel, PolynomialKernel
+import itertools
+from tqdm import tqdm
 
 
 class SVC:
@@ -36,9 +38,10 @@ class SVC:
         self.epsilon = epsilon
         self.verbose = verbose
 
-    def fit(self, X, y):
+    def fit(self, X: List, y: np.ndarray):
         # assumption : X *always* contains samples (i.e. X[0] is the first sample and so on)
         # however, if we have a precomputed kernel, we don't recompute it
+        assert len(X) == len(y), f"Unmatched sizes : len(X) = {len(X)}, len(y) = {len(y)}"
         if self.loss == "hinge" and self.penalty == "l2":
             self._fit_l2_hinge(X, y)
         else:
@@ -62,7 +65,19 @@ class SVC:
         :param X: The data points to classify
         :return: a vector containing the decision function value for each data point
         """
-        kernel_eval = self.kernel(self._separating_vecs, X)
+        n_sep = len(self._separating_vecs)
+        n_points = len(X)
+        kernel_eval = np.zeros((n_sep, n_points), dtype=np.float32)
+        idx_itor = itertools.product(range(n_sep), range(n_points))
+        if self.verbose:
+            idx_itor = tqdm(
+                idx_itor,
+                desc='[SVC.predict] Computing kernel...',
+            )
+
+        for i, j in idx_itor:
+            kernel_eval[i, j] = self.kernel(self._separating_vecs[i], X[j])
+
         return (
             np.sum(self._separating_weights[:, None] * kernel_eval, axis=0)
             + self._offset
@@ -84,12 +99,14 @@ class SVC:
         :param y: scalar or 1D array of labels
         :return: array of the same shape as y but with values in {-1, 1}
         """
+        if isinstance(y, list):
+            y = np.array(y)
         if np.all(y**2 == 1.0):
             return y
         bool_y = y > 0
         return 1.0 * bool_y - 1.0 * ~bool_y
 
-    def _fit_l2_hinge(self, X: np.ndarray, y: np.ndarray) -> None:
+    def _fit_l2_hinge(self, X: List, y: np.ndarray) -> None:
         """
         Fit the SVC when loss='hinge' and penalty='l2' using the dual formulation (Homework 2).
 
@@ -100,7 +117,17 @@ class SVC:
         y = self._check_labels(y)
 
         # Compute Kernel
-        K = self.kernel(X, X)
+        K = np.zeros(shape=(n, n), dtype=np.float64)
+        idx_itor = itertools.combinations_with_replacement(range(n), 2)
+        if self.verbose:
+            idx_itor = tqdm(
+                idx_itor,
+                desc='[SVC.fit] Computing train kernel...',
+            )
+
+        for i, j in idx_itor:
+            K[i, j] = self.kernel(X[i], X[j])
+            K[j, i] = K[i, j]
         SVC._check_kernel(K)
 
         # Dual problem definition
@@ -126,6 +153,8 @@ class SVC:
             alpha @ _y == 0.0,
         ]
 
+        if self.verbose:
+            print('[SVC.fit] Solving dual problem...')
         dual_problem = cvx.Problem(dual_objective, dual_constraints)
         dual_problem.solve()
 
