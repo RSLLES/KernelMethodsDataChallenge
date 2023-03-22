@@ -5,7 +5,7 @@ import numpy as np
 
 class TestDataset(unittest.TestCase):
     def test_train_solo(self):
-        x = np.arange(7)
+        x = np.arange(7).tolist()
         d = Dataset(X=x, k_folds=1)
         self.assertEqual(len(d), 1, "Dataset length problem.")
         d = iter(d)
@@ -17,7 +17,7 @@ class TestDataset(unittest.TestCase):
         self.assertIsNone(y_test)
 
     def test_train_without_cv(self):
-        x = np.arange(7)
+        x = np.arange(7).tolist()
         y = np.array([1, 0, 0, 1, 1, 0, 1])
         d = Dataset(X=x, y=y, k_folds=1)
         self.assertEqual(len(d), 1, "Dataset length problem.")
@@ -30,7 +30,7 @@ class TestDataset(unittest.TestCase):
         self.assertIsNone(y_test)
 
     def test_train_and_cv(self):
-        x = np.arange(7)
+        x = np.arange(7).tolist()
         y = np.array([1, 0, 0, 1, 1, 0, 1])
         d = Dataset(X=x, y=y, k_folds=3)
         self.assertEqual(len(d), 3, "Dataset length problem.")

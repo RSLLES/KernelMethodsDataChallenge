@@ -1,5 +1,6 @@
 import random
 from typing import List
+import numpy as np
 
 
 def split_list(L: list, k: int):
@@ -45,7 +46,9 @@ class Dataset:
     """
 
     def __init__(self, X, y=None, k_folds=1, shuffle=False) -> None:
+        assert isinstance(X, list)
         assert y is None or len(X) == len(y), "X and Y must have the same length."
+        assert y is None or isinstance(y, np.ndarray)
         self.n = len(X)
         self.X = X
         self.y = y
@@ -74,14 +77,14 @@ class Dataset:
 
         # Around train
         X_train = [self.X[i] for i in idxs_train]
-        y_train = [self.y[i] for i in idxs_train] if self.y is not None else None
+        y_train = self.y[idxs_train] if self.y is not None else None
 
         if self.k_folds == 1:
             return X_train, y_train, None, None
 
         # Around test
         X_test = [self.X[i] for i in idxs_test]
-        y_test = [self.y[i] for i in idxs_test] if self.y is not None else None
+        y_test = self.y[idxs_test] if self.y is not None else None
 
         return X_train, y_train, X_test, y_test
 

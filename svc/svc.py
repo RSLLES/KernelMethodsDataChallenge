@@ -46,7 +46,7 @@ class SVC:
                 f"Method using loss {self.loss} and penalty {self.penalty} is not implemented yet."
             )
 
-    def predict(self, X) -> np.ndarray:
+    def predict(self, X: list) -> np.ndarray:
         """
         Compute 0/1 labels for samples.
 
@@ -55,7 +55,7 @@ class SVC:
         """
         return (self.decision_function(X) > 0).astype(int)
 
-    def decision_function(self, X: np.ndarray) -> np.ndarray:
+    def decision_function(self, X: list) -> np.ndarray:
         """
         Compute the classification decision function.
 
@@ -143,9 +143,9 @@ class SVC:
         # now, get vectors needed for separation
         nonzero_alpha_idx = self._alpha > self.epsilon
         support_idx = nonzero_alpha_idx & (self._alpha < (self.C - self.epsilon))
-        self._support_vecs = X[support_idx]
+        self._support_vecs = [X[i] for i in range(len(X)) if support_idx[i]]
         self._separating_weights = self._alpha[nonzero_alpha_idx] * y[nonzero_alpha_idx]
-        self._separating_vecs = X[nonzero_alpha_idx]
+        self._separating_vecs = [X[i] for i in range(len(X)) if nonzero_alpha_idx[i]]
         if self.verbose:
             print(
                 f"# Support vectors    : {len(self._support_vecs)}\n"
@@ -155,12 +155,12 @@ class SVC:
         # compute b (hyperplane offset) : for x0 a support vector, y0 (f(x0) + b) = -1
         f_x0 = np.dot(
             self._separating_weights,
-            self.kernel(self._separating_vecs, self._support_vecs[0][None, :]),
+            self.kernel(self._separating_vecs, self._support_vecs[0]),
         )
         self._offset = y[support_idx][0] - f_x0
         self._rkhs_norm = np.sqrt(np.dot(self._alpha, hess.value @ self._alpha))
 
-    def score(self, X: np.ndarray, y: np.ndarray, score_type: Optional[str] = None):
+    def score(self, X: list, y: np.ndarray, score_type: Optional[str] = None):
         """
         Compute accuracy, precision and recall, or one of them.
 

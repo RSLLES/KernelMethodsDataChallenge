@@ -22,7 +22,7 @@ def gen_data(N):
     dist = np.einsum("Nd,Nd->N", X, X)
     p = sgm(x=dist, t=0.4, sigma=10)
     Y = np.random.rand(N) > p
-    return X, Y
+    return [x for x in X], Y
 
 
 def gen_linearly_separable_data(
@@ -49,8 +49,8 @@ def gen_linearly_separable_data(
         negative_points[i] = mu_negative + np.random.randn(2) * sigma_negative
 
     y = np.concatenate((np.ones(points_per_class), np.zeros(points_per_class)))
-
-    return np.concatenate((positive_points, negative_points)), y.astype(bool)
+    X = np.concatenate((positive_points, negative_points))
+    return [x for x in X], y.astype(bool)
 
 
 def gen_circles(N, n_circles):
@@ -89,7 +89,7 @@ def gen_circles(N, n_circles):
         points[curr_idx, 1] = points[curr_idx - 1, 1]
         labels[curr_idx] = n_circles - 1
 
-    return points, labels
+    return [x for x in points], labels
 
 
 def show(X, Y):
