@@ -35,3 +35,6 @@ jobs:
     - name: SVC tests
       run: |
         python -m unittest -v svc.test_svc
+    - name: Kernels tests
+      run: |
+        python -m unittest -v kernels.test_kernels
