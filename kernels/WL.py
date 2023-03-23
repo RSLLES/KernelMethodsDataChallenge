@@ -1,6 +1,5 @@
-from typing import Union, List
+from typing import List
 from collections import Counter
-from functools import wraps
 from kernels.kernel import Kernel
 import networkx as nx
 
@@ -110,7 +109,5 @@ class WeisfeilerLehmanKernel(Kernel):
     def inner(self, counts1, counts2):
         s = 0
         for c1, c2 in zip(counts1, counts2):
-            for label in c1:
-                if label in c2:
-                    s += c1[label] * c2[label]
+            s += sum([c1[k] * c2[k] for k in c1 if k in c2])
         return s
