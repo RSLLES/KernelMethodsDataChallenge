@@ -45,7 +45,7 @@ class Dataset:
     (in this case, X_test and y_test will be set to None).
     """
 
-    def __init__(self, X, y=None, k_folds=1, shuffle=False) -> None:
+    def __init__(self, X, y=None, k_folds=1, shuffle=False, seed=0) -> None:
         assert isinstance(X, list)
         assert y is None or len(X) == len(y), "X and Y must have the same length."
         assert y is None or isinstance(y, np.ndarray)
@@ -57,6 +57,7 @@ class Dataset:
         # Cross validation
         idxs = list(range(len(X)))
         if shuffle:
+            random.seed(0)
             random.shuffle(idxs)
         self.idxs_test = split_list(idxs, k=self.k_folds)
         self.idxs_train = all_except(self.idxs_test)
@@ -98,3 +99,6 @@ class Dataset:
         a = self.__getitem__(self.idx)
         self.idx += 1
         return a
+
+    def full(self):
+        return self.X, self.y
