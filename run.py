@@ -36,7 +36,7 @@ def train_and_score(kernel, X, y, Xv, yv):
     return score
 
 
-def test(config, ds, ds_val, kernel):
+def test(config, ds, ds_val, kernel, filename):
     """
     Tests the performance of the classifier on the validation set.
 
@@ -55,17 +55,17 @@ def test(config, ds, ds_val, kernel):
     print("Predicting values...")
     y_pred = svc.predict(X_val)
     print("Exporting...")
-    if not os.path.isdir(config.save_directory):
-        os.mkdir(config.save_directory)
-    module_name = [key for key in sys.modules if sys.modules[key] == config].pop()
+    if not os.path.isdir(config.export_directory):
+        os.mkdir(config.export_directory)
     df = pd.DataFrame(
-        y_pred, columns=["Predicted"], index=pd.RangeIndex(1, len(y_pred) + 1)
+        y_pred,
+        columns=["Predicted"],
+        index=pd.RangeIndex(1, len(y_pred) + 1, name="Id"),
     )
-    df.index.name = "Id"
-    df.to_csv(os.path.join(config.save_directory, module_name + ".csv"))
+    df.to_csv(os.path.join(config.export_directory, filename + ".csv"))
 
 
-def run(config, predict):
+def run(config, predict, filename):
     """
     Runs the entire pipeline for training and testing a classifier.
 
@@ -105,9 +105,14 @@ def run(config, predict):
     df[cols_to_convert] = (df[cols_to_convert] * 100).round(1).astype(str) + "%"
     print(df.to_markdown(index=False))
 
+    if not os.path.isdir(config.results_directory):
+        os.mkdir(config.results_directory)
+    with open(os.path.join(config.results_directory, filename + ".md"), "w") as f:
+        f.write(df.to_markdown(index=False))
+
     # Test
     if predict:
-        test(config, ds, ds_val, kernel)
+        test(config, ds, ds_val, kernel, filename)
 
 
 def main(config_path: str, predict=False):
@@ -127,8 +132,9 @@ def main(config_path: str, predict=False):
     - kernel: Initialized kernel object.
 
     ### Save ###
-    - save_directory (str) : Path to directory where the output csv will be saved
+    - export_directory (str) : Path to directory where the output csv will be saved
     if the predict flag is enabled.
+    - results_directory (str) : Path to directory where the summary will be saved as a Markdown file.
 
     Args:
         config_path (str): Path to python module describing configuration for current run.
@@ -142,7 +148,7 @@ def main(config_path: str, predict=False):
     sys.modules[config_name] = config
     spec.loader.exec_module(config)
 
-    run(config=config, predict=predict)
+    run(config=config, predict=predict, filename=filename)
 
 
 if __name__ == "__main__":

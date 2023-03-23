@@ -3,7 +3,7 @@ data_directory = "data/"
 x_val = "test_data.pkl"
 x = "training_data.pkl"
 y = "training_labels.pkl"
-k_folds_cross_val = 2
+k_folds_cross_val = 6
 
 ### Kernel ###
 from kernels.WL import WeisfeilerLehmanKernel
@@ -11,4 +11,5 @@ from kernels.WL import WeisfeilerLehmanKernel
 kernel = WeisfeilerLehmanKernel(depth=3, use_cache=True)
 
 ### Save ###
-save_directory = "save/"
+export_directory = "export/"
+results_directory = "results/"
