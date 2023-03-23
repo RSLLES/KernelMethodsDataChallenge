@@ -73,6 +73,7 @@ class SVC:
             idx_itor = tqdm(
                 idx_itor,
                 desc='[SVC.predict] Computing kernel...',
+                total=n_sep * n_points,
             )
 
         for i, j in idx_itor:
@@ -123,6 +124,7 @@ class SVC:
             idx_itor = tqdm(
                 idx_itor,
                 desc='[SVC.fit] Computing train kernel...',
+                total=n * (n + 1) / 2,
             )
 
         for i, j in idx_itor:
