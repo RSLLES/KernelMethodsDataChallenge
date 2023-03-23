@@ -41,7 +41,9 @@ class SVC:
     def fit(self, X: List, y: np.ndarray):
         # assumption : X *always* contains samples (i.e. X[0] is the first sample and so on)
         # however, if we have a precomputed kernel, we don't recompute it
-        assert len(X) == len(y), f"Unmatched sizes : len(X) = {len(X)}, len(y) = {len(y)}"
+        assert len(X) == len(
+            y
+        ), f"Unmatched sizes : len(X) = {len(X)}, len(y) = {len(y)}"
         if self.loss == "hinge" and self.penalty == "l2":
             self._fit_l2_hinge(X, y)
         else:
@@ -72,7 +74,7 @@ class SVC:
         if self.verbose:
             idx_itor = tqdm(
                 idx_itor,
-                desc='[SVC.predict] Computing kernel...',
+                desc="[SVC.predict] Computing kernel...",
                 total=n_sep * n_points,
             )
 
@@ -123,7 +125,7 @@ class SVC:
         if self.verbose:
             idx_itor = tqdm(
                 idx_itor,
-                desc='[SVC.fit] Computing train kernel...',
+                desc="[SVC.fit] Computing train kernel...",
                 total=n * (n + 1) / 2,
             )
 
@@ -156,7 +158,7 @@ class SVC:
         ]
 
         if self.verbose:
-            print('[SVC.fit] Solving dual problem...')
+            print("[SVC.fit] Solving dual problem...")
         dual_problem = cvx.Problem(dual_objective, dual_constraints)
         dual_problem.solve()
 
@@ -212,9 +214,13 @@ class SVC:
         fn = np.sum(~y_pred & y)
 
         accuracy = (tp + tn) / (tp + tn + fp + fn)
-        precision = tp / (tp + fp)
-        recall = tp / (tp + fn)
-        f1 = 2 * (precision * recall) / (precision + recall)
+        precision = tp / (tp + fp) if (tp + fp) >= 1 else 0.0
+        recall = tp / (tp + fn) if (tp + fn) >= 1 else 0.0
+        f1 = (
+            2 * (precision * recall) / (precision + recall)
+            if (precision + recall) >= 1
+            else 0.0
+        )
 
         if score == "accuracy":
             return accuracy
