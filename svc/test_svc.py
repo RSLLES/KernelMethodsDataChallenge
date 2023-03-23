@@ -22,12 +22,13 @@ class SVCTest(unittest.TestCase):
                 model = SVC(kernel=kernel)
                 model.fit(X=X_train, y=y_train)
                 self.assertEqual(model._opt_status, "optimal")
-                accuracy, precision, recall = model.score(
+                accuracy, precision, recall, f1 = model.score(
                     X=X_test, y=np.array(y_test).astype(bool)
                 )
                 print(
                     f"Fold {k+1} : Accuracy = {100*accuracy:0.2f}%, "
-                    f"Precision = {100*precision:0.2f}%, Recall = {100*recall:0.2f}%"
+                    f"Precision = {100*precision:0.2f}%, Recall = {100*recall:0.2f}%, "
+                    f"f1 = {100 * f1:0.2f}%"
                 )
 
             # uncomment for visual check (does not work well w/ linear kernel since data is not linearly separable)

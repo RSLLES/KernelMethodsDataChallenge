@@ -212,6 +212,7 @@ class SVC:
         accuracy = (tp + tn) / (tp + tn + fp + fn)
         precision = tp / (tp + fp)
         recall = tp / (tp + fn)
+        f1 = 2 * (precision * recall) / (precision + recall)
 
         if score == "accuracy":
             return accuracy
@@ -219,5 +220,7 @@ class SVC:
             return precision
         if score == "recall":
             return recall
+        if score == "f1":
+            return f1
 
-        return accuracy, precision, recall
+        return accuracy, precision, recall, f1
