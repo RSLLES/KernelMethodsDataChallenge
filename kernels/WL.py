@@ -6,115 +6,111 @@ import networkx as nx
 
 Graph = nx.classes.graph.Graph
 
+
 #########################
 ### Weisfeiler Lehman ###
 #########################
 
 
-def get_neighbours_based_label(G: Graph, n: int) -> int:
+def compute_neighbors_based_label(G: Graph, labels: dict, n: int) -> int:
     """
-    This function returns a new label based on the neighbors of node n in graph G.
+    Computes a new label based on labels of a node and its direct neighbors.
 
-    Args:
-    - G (Graph): the input graph
-    - n (int): the node index
+    Parameters
+    ----------
+    G : networkx.classes.graph.Graph
+        The input graph to which this node belongs.
+    labels : dict
+        A dictionary where key represents the node number and value is its corresponding node label
+    n : int
+        The node whose feature has to be computed.
 
-    Returns:
-    - int: a new label for the node n of G
+    Returns
+    -------
+    int :
+        A new label based on labels of a node and its direct neighbors.
     """
-    labels = G.nodes[n]["labels"] + sorted(
-        [G.nodes[k]["labels"][0] for k in G.neighbors(n)]
-    )
-    return hash(tuple(labels))
+    label = [labels[n]] + sorted([labels[k] for k in G.neighbors(n)])
+    return hash(tuple(label))
 
 
-def assign_neighbours_based_labeling(G: Graph) -> None:
+def WL_iterations(G: Graph, labels: dict, depth: int) -> int:
     """
-    This function assigns labels to nodes based on neighboring labels
+    Computes the Weisfeiler Lehman reduction of a given level.
 
-    Args:
-    - G (Graph): the input graph
+    Parameters
+    ----------
+    G : networkx.classes.graph.Graph
+        The input graph which needs to be reduced
+    labels : dict
+        A dictionary where key represents the node number and value is its corresponding node label
+    depth : int
+        An integer representing the depth of iterations to be performed by Weisfeiler Lehman.
 
-    Returns:
-    - None
+    Returns
+    -------
+    list(collections.Counter) :
+        A list of counter objects where each counter representa the frequency of each labeled
+        substructure observed at `i-th` iteration.
     """
-    labels = {n: get_neighbours_based_label(G, n) for n in G.nodes()}
-    for n in G.nodes():
-        G.nodes[n]["labels"] = [labels[n]]
-
-
-def label_counts_over_WL_iteration(G: Graph, depth: int) -> int:
-    assert isinstance(depth, int), "depth should be a non-negative integer"
     assert depth >= 0, "depth should be a non-negative integer"
 
-    counts = Counter([G.nodes[n]["labels"][0] for n in G.nodes()])
-
+    counts = Counter(labels.values())
     if depth == 0:
         return [counts]
 
-    assign_neighbours_based_labeling(G)
-    return [counts] + label_counts_over_WL_iteration(G, depth - 1)
+    new_labels = {
+        n: compute_neighbors_based_label(G=G, labels=labels, n=n) for n in G.nodes()
+    }
 
+    for n in G.nodes():
+        labels[n] = new_labels[n]
 
-# @cache_WL
-def WL(G1: Graph, G2: Graph, depth: int) -> int:
-    """
-    This function implements the Weisfeiler-Lehman Graph Kernel at a given depth.
-    See the following paper : https://www.jmlr.org/papers/volume12/shervashidze11a/shervashidze11a.pdf
-
-    Args:
-    - G1 (Graph): first input graph
-    - G2 (Graph): second input graph
-    - depth (int): the maximum depth of the Weisfeiler-Lehman algorithm. It should be a non-negative integer.
-
-    Returns:
-    - int: whether the two graphs are isomorphic (if the returned value equals zero), or how many times they differ
-            in the number of nodes with a specific label in their neighborhood (if the returned value is greater than zero).
-    """
-    assert isinstance(depth, int), "depth should be a non-negative integer"
-    assert depth >= 0, "depth should be a non-negative integer"
-
-    all_counts1 = label_counts_over_WL_iteration(G1, depth)
-    all_counts2 = label_counts_over_WL_iteration(G2, depth)
-
-    s = 0
-    for counts1, counts2 in zip(all_counts1, all_counts2):
-        for label in counts1:
-            if label in counts2:
-                s += counts1[label] * counts2[label]
-    return s
+    return [counts] + WL_iterations(G=G, labels=labels, depth=depth - 1)
 
 
 class WeisfeilerLehmanKernel(Kernel):
-    def __init__(self, depth: int) -> None:
+    def __init__(self, depth: int, *args, **kargs) -> None:
         """
-        Weisfeiler Lehman Kernel
+        Implementation of the Weisfeiler-Lehman Graph Kernel at a given depth.
+        See the following paper : https://www.jmlr.org/papers/volume12/shervashidze11a/shervashidze11a.pdf
 
-        Parameters:
-            depth (int): depth of kernel
+        Parameters
+        ----------
+        depth : int
+            An integer representing the depth of iterations to be performed by Weisfeiler Lehman
+            algorithm. This should always be a non-negative integer.
         """
         assert (
             isinstance(depth, int) and depth >= 0
         ), "depth should be a non-negative integer"
+
         self.depth = depth
-        super().__init__()
+        super().__init__(*args, **kargs)
 
-    def kernel(
-        self,
-        x1: Union[Graph, List[Graph]],
-        x2: Union[Graph, List[Graph]],
-    ) -> Union[int, List[int]]:
+    def phi(self, x: Graph, *args, **kargs) -> List[Counter]:
         """
-        Compute the Weisfeiler Lehman Kernel at a given depth for a single or several pairs of graphs.
+        Generates the feature vector representation of given directed graph using Weisfeiler-Lehman graph
+        kernel.
 
-        Args:
-            x1 (Union[Graph, List[Graph]]): A single graph or a list of graphs.
-            x2 (Union[Graph, List[Graph]]): A single graph or a list of graphs.
+        Parameters
+        ----------
+        x : networkx.classes.graph.Graph
+            Input undirected graph to be represented in feature space
 
-        Returns:
-             The Weisfeiler Lehman Kernel of two graphs if given two graphs.
-             A list of results or a list of list of results if either `x1` or `x2` is a list.
+        Returns
+        -------
+        list(collections.Counter) :
+            A list of counter objects where each counter representa the frequency of each labeled
+            substructure observed at `i-th` iteration.
         """
+        labels = {n: x.nodes[n]["labels"][0] for n in x.nodes}
+        return WL_iterations(G=x, labels=labels, depth=self.depth)
 
-        G1, G2 = x1.copy(), x2.copy()
-        return WL(G1=G1, G2=G2, depth=self.depth)
+    def inner(self, counts1, counts2):
+        s = 0
+        for c1, c2 in zip(counts1, counts2):
+            for label in c1:
+                if label in c2:
+                    s += c1[label] * c2[label]
+        return s
