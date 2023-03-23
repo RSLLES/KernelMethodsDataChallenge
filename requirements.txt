@@ -6,3 +6,4 @@ black
 networkx
 tabulate
 pandas
+fire
