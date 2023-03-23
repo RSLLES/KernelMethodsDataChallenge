@@ -4,3 +4,5 @@ cvxpy
 matplotlib
 black
 networkx
+tabulate
+pandas
