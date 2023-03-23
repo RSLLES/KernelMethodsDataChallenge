@@ -43,12 +43,12 @@ def load_data(config):
         ds_val = Dataset(X=x_val)
         return ds, ds_val
 
-    return ds
+    return ds, None
 
 
 ### Unit test ###
 if __name__ == "__main__":
-    import configs.challenge as config
+    import configs.wl_depth3 as config
 
     ds, _ = load_data(config=config)
     print("Data loaded with success.")
