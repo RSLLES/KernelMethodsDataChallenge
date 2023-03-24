@@ -193,42 +193,43 @@ class SVC:
         self._offset = y[support_idx][0] - f_x0
         self._rkhs_norm = np.sqrt(np.dot(self._alpha, hess.value @ self._alpha))
 
-    def score(self, X: list, y: np.ndarray, score_type: Optional[str] = None):
-        """
-        Compute accuracy, precision and recall, or one of them.
 
-        :param X: the samples to predict labels of
-        :param y: the ground-truth labels of X (should be a binary array)
-        :param score_type: 'accuracy', 'precision' or 'recall' to select which score to compute
-        :return: a tuple of length 3 : (accuracy, precision, recall) or one of them if 'score_type' was passed
-        """
-        if y.dtype != bool:
-            raise ValueError(f"y should be a binary array, found type {y.dtype}.")
+def score(svc, X: list, y: np.ndarray, score_type: Optional[str] = None):
+    """
+    Compute accuracy, precision and recall, or one of them.
 
-        score = score_type.lower() if score_type else None
-        y_pred = self.predict(X)
+    :param X: the samples to predict labels of
+    :param y: the ground-truth labels of X (should be a binary array)
+    :param score_type: 'accuracy', 'precision' or 'recall' to select which score to compute
+    :return: a tuple of length 3 : (accuracy, precision, recall) or one of them if 'score_type' was passed
+    """
+    if y.dtype != bool:
+        raise ValueError(f"y should be a binary array, found type {y.dtype}.")
 
-        tp = np.sum(y_pred & y)
-        tn = np.sum(~y_pred & ~y)
-        fp = np.sum(y_pred & ~y)
-        fn = np.sum(~y_pred & y)
+    score = score_type.lower() if score_type else None
+    y_pred = svc.predict(X)
 
-        accuracy = (tp + tn) / (tp + tn + fp + fn)
-        precision = tp / (tp + fp) if (tp + fp) >= 1 else 0.0
-        recall = tp / (tp + fn) if (tp + fn) >= 1 else 0.0
-        f1 = (
-            2 * (precision * recall) / (precision + recall)
-            if (precision + recall) >= 1
-            else 0.0
-        )
+    tp = np.sum(y_pred & y)
+    tn = np.sum(~y_pred & ~y)
+    fp = np.sum(y_pred & ~y)
+    fn = np.sum(~y_pred & y)
 
-        if score == "accuracy":
-            return accuracy
-        if score == "precision":
-            return precision
-        if score == "recall":
-            return recall
-        if score == "f1":
-            return f1
+    accuracy = (tp + tn) / (tp + tn + fp + fn)
+    precision = tp / (tp + fp) if (tp + fp) >= 1 else 0.0
+    recall = tp / (tp + fn) if (tp + fn) >= 1 else 0.0
+    f1 = (
+        2 * (precision * recall) / (precision + recall)
+        if (precision + recall) >= 1
+        else 0.0
+    )
 
-        return accuracy, precision, recall, f1
+    if score == "accuracy":
+        return accuracy
+    if score == "precision":
+        return precision
+    if score == "recall":
+        return recall
+    if score == "f1":
+        return f1
+
+    return accuracy, precision, recall, f1

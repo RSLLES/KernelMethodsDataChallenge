@@ -1,4 +1,6 @@
-from svc.svc import SVC
+# from svc.svc import SVC
+from svc.svc import score as score_metric
+from sklearn.svm import SVC
 from preprocessing.load import load_data
 import numpy as np
 import fire
@@ -31,7 +33,7 @@ def train_and_score(kernel, X, y, Xv, yv):
     """
     svc = SVC(kernel=kernel, verbose=True)
     svc.fit(X=X, y=np.array(y))
-    score = svc.score(X=Xv, y=yv.astype(bool))
+    score = score_metric(svc=svc, X=Xv, y=yv.astype(bool))
     print_metrics(score)
     return score
 
