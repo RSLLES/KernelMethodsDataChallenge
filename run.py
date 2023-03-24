@@ -1,6 +1,7 @@
-# from svc.svc import SVC
+from svc.svc import SVC
 from svc.svc import score as score_metric
-from sklearn.svm import SVC
+
+# from sklearn.svm import SVC
 from preprocessing.load import load_data
 import numpy as np
 import fire
@@ -55,7 +56,7 @@ def test(config, ds, ds_val, kernel, filename):
     svc = SVC(kernel=kernel, verbose=True)
     svc.fit(X=X, y=np.array(y))
     print("Predicting values...")
-    y_pred = svc.predict(X_val)
+    y_pred = svc.decision_function(X_val)
     print("Exporting...")
     if not os.path.isdir(config.export_directory):
         os.mkdir(config.export_directory)
