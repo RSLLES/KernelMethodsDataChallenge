@@ -13,8 +13,8 @@ import pandas as pd
 
 def print_metrics(score_output):
     """Prints metrics produced by SVC.score function"""
-    acc, prec, rec, f1 = score_output
-    s = f"Accuracy = {acc*100:.1f}%, Precision = {prec*100:.1f}%, Recall = {rec*100:.1f}%, F1 = {f1*100:.1f}%"
+    acc, prec, rec, f1, rocauc = score_output
+    s = f"Accuracy = {acc*100:.1f}%, Precision = {prec*100:.1f}%, Recall = {rec*100:.1f}%, F1 = {f1*100:.1f}%, ROCAUC = {rocauc*100:.1f}%"
     print(s)
 
 
@@ -79,6 +79,8 @@ def run(config, predict, filename):
     Returns:
         None
     """
+    print(f"Config : {filename}")
+
     # Loading
     print("Loading data...")
     ds, ds_val = load_data(config=config)
@@ -100,12 +102,10 @@ def run(config, predict, filename):
     average_scores = sum(scores) / len(scores)
     average_log = ("Average", *tuple(average_scores))
 
-    df = pd.DataFrame(
-        [*logs, average_log], columns=["", "Accuracy", "Precision", "Recall", "F1"]
-    )
+    cols = ["Accuracy", "Precision", "Recall", "F1", "ROCAUC"]
+    df = pd.DataFrame([*logs, average_log], columns=[""] + cols)
 
-    cols_to_convert = ["Accuracy", "Precision", "Recall", "F1"]
-    df[cols_to_convert] = (df[cols_to_convert] * 100).round(1).astype(str) + "%"
+    df[cols] = (df[cols] * 100).round(1).astype(str) + "%"
     print(df.to_markdown(index=False))
 
     if not os.path.isdir(config.results_directory):

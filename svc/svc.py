@@ -5,6 +5,7 @@ from typing import Union, Callable, Optional, List
 from kernels.kernels import LinearKernel, GaussianKernel, PolynomialKernel
 import itertools
 from tqdm import tqdm
+from sklearn.metrics import roc_auc_score
 
 
 class SVC:
@@ -207,7 +208,8 @@ def score(svc, X: list, y: np.ndarray, score_type: Optional[str] = None):
         raise ValueError(f"y should be a binary array, found type {y.dtype}.")
 
     score = score_type.lower() if score_type else None
-    y_pred = svc.predict(X)
+    y_score = svc.decision_function(X)
+    y_pred = y_score > 0
 
     tp = np.sum(y_pred & y)
     tn = np.sum(~y_pred & ~y)
@@ -222,6 +224,7 @@ def score(svc, X: list, y: np.ndarray, score_type: Optional[str] = None):
         if (precision + recall) > 0
         else 0.0
     )
+    rocauc = roc_auc_score(y_true=y, y_score=y_score)
 
     if score == "accuracy":
         return accuracy
@@ -231,5 +234,7 @@ def score(svc, X: list, y: np.ndarray, score_type: Optional[str] = None):
         return recall
     if score == "f1":
         return f1
+    if score == "rocauc":
+        return rocauc
 
-    return accuracy, precision, recall, f1
+    return accuracy, precision, recall, f1, rocauc
