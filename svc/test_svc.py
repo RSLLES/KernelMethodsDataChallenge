@@ -21,21 +21,6 @@ class SVCTest(unittest.TestCase):
             print(f"Test with {kernel.__class__.__name__}")
             ds = Dataset(X=X, y=y, k_folds=3, shuffle=True)
             for k, (X_train, y_train, X_test, y_test) in enumerate(ds):
-                # Ours
-                model = SVC(kernel=kernel)
-                model.fit(X=X_train, y=y_train)
-                self.assertEqual(model._opt_status, "optimal")
-
-                y_pred = model.predict(X_test)
-                accuracy, precision, recall, f1 = score(
-                    svc=model, X=X_test, y=np.array(y_test).astype(bool)
-                )
-                print(
-                    f"[Ours] Fold {k+1}/3 : Accuracy = {100*accuracy:0.2f}%, "
-                    f"Precision = {100*precision:0.2f}%, Recall = {100*recall:0.2f}%, "
-                    f"f1 = {100 * f1:0.2f}%"
-                )
-
                 # Sklearn
                 model_sk = SVCSKLearn(kernel=kernel)
                 model_sk.fit(X=X_train, y=y_train)
@@ -50,6 +35,49 @@ class SVCTest(unittest.TestCase):
                     f"f1 = {100 * f1:0.2f}%"
                 )
 
+                # Ours
+                model = SVC(kernel=kernel, epsilon=1e-4)
+                model.fit(X=X_train, y=y_train)
+                self.assertEqual(model._opt_status, "optimal")
+
+                y_pred = model.predict(X_test)
+                accuracy, precision, recall, f1 = score(
+                    svc=model, X=X_test, y=np.array(y_test).astype(bool)
+                )
+                print(
+                    f"[Ours] Fold {k+1}/3 : Accuracy = {100*accuracy:0.2f}%, "
+                    f"Precision = {100*precision:0.2f}%, Recall = {100*recall:0.2f}%, "
+                    f"f1 = {100 * f1:0.2f}%"
+                )
+
+                # Plotting (for local checks only !)
+
+                # from .plotting import plot_2d_classif
+                # plot_2d_classif(
+                #     np.array(X_train), y_train, model.predict(X_train), model, bound=((-1.0, 1.0), (-1.0, 1.0))
+                # )
+                # import matplotlib.pyplot as plt
+                # y_sk = model_sk.predict(X_train).astype(bool)
+                # _y = y_train.astype(bool)
+                # tp_sk = _y & y_sk
+                # fp_sk = ~_y & y_sk
+                # tn_sk = ~_y & ~y_sk
+                # fn_sk = _y & ~y_sk
+                # plt.figure(figsize=(8, 6))
+                # plt.scatter(x=np.array(X_train)[tp_sk, 0], y=np.array(X_train)[tp_sk, 1], c='tab:green')
+                # plt.scatter(x=np.array(X_train)[fp_sk, 0], y=np.array(X_train)[fp_sk, 1], c='tab:orange')
+                # plt.scatter(x=np.array(X_train)[tn_sk, 0], y=np.array(X_train)[tn_sk, 1], c='tab:blue')
+                # plt.scatter(x=np.array(X_train)[fn_sk, 0], y=np.array(X_train)[fn_sk, 1], c='tab:red')
+                # plt.scatter(x=np.array(X_train)[model_sk.support_, 0],
+                #             y=np.array(X_train)[model_sk.support_, 1],
+                #             facecolors="none",
+                #             edgecolors="red",
+                #             s=80,
+                #             )
+                # plt.xlim((-1, 1))
+                # plt.ylim((-1, 1))
+                # plt.grid()
+                # plt.show()
                 # Compare predictions
                 np.testing.assert_equal(
                     np.array(y_pred).astype(bool), np.array(y_pred_sk).astype(bool)

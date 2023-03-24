@@ -52,8 +52,8 @@ def plot_2d_classif(
         plot_hypersurface(ax, bound[0], model, 0.0)
         # Plot margin
         ax.scatter(
-            model._support_vecs[:, 0],
-            model._support_vecs[:, 1],
+            np.array(model._support_vecs)[:, 0],
+            np.array(model._support_vecs)[:, 1],
             label="Support",
             s=80,
             facecolors="none",

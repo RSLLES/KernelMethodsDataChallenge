@@ -161,7 +161,7 @@ class SVC:
         if self.verbose:
             print("[SVC.fit] Solving dual problem...")
         dual_problem = cvx.Problem(dual_objective, dual_constraints)
-        dual_problem.solve()
+        dual_problem.solve(solver=cvx.OSQP, eps_abs=max(self.epsilon / 100, 10 * sys.float_info.epsilon))
 
         if self.verbose:
             if dual_problem.status != "optimal":
@@ -180,18 +180,28 @@ class SVC:
         self._support_vecs = [X[i] for i in range(len(X)) if support_idx[i]]
         self._separating_weights = self._alpha[nonzero_alpha_idx] * y[nonzero_alpha_idx]
         self._separating_vecs = [X[i] for i in range(len(X)) if nonzero_alpha_idx[i]]
+
+        # f is the RKHS function optimal for the primal problem
+        def f(x):
+            _kern_eval = self.kernel(self._separating_vecs, x)
+            return np.dot(self._separating_weights, _kern_eval)
+
+        if len(self._support_vecs) == 0:
+            # this can happen when all dual coefficients are close to C
+            neg_idx = np.argmax([f(self._separating_vecs[i]) for i in range(len(self._separating_vecs)) if y[i] == -1])
+            pos_idx = np.argmin([f(self._separating_vecs[i]) for i in range(len(self._separating_vecs)) if y[i] == 1])
+            self._support_vecs = [self._separating_vecs[neg_idx], self._separating_vecs[pos_idx]]
+            self._offset = -0.5 * (f(self._support_vecs[0]) + f(self._support_vecs[1]))
+        else:
+            # compute b (hyperplane offset) : for x0 a support vector, y0 (f(x0) + b) = -1
+            f_x0 = f(self._support_vecs[0])
+            self._offset = y[support_idx][0] - f_x0
+
         if self.verbose:
             print(
                 f"# Support vectors    : {len(self._support_vecs)}\n"
                 f"# Separating vectors : {len(self._separating_vecs)}"
             )
-
-        # compute b (hyperplane offset) : for x0 a support vector, y0 (f(x0) + b) = -1
-        f_x0 = np.dot(
-            self._separating_weights,
-            self.kernel(self._separating_vecs, self._support_vecs[0]),
-        )
-        self._offset = y[support_idx][0] - f_x0
         self._rkhs_norm = np.sqrt(np.dot(self._alpha, hess.value @ self._alpha))
 
 
