@@ -9,7 +9,7 @@ class GaussianKernel(Kernel):
         self.gamma = 1.0 / (2 * sigma**2)
 
     def kernel(self, x1, x2):
-        return np.exp(-self.gamma * np.linalg.norm(x1 - x2))
+        return np.exp(-self.gamma * np.dot(x1 - x2, x1 - x2))
 
 
 class LinearKernel(Kernel):
