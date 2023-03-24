@@ -219,7 +219,7 @@ def score(svc, X: list, y: np.ndarray, score_type: Optional[str] = None):
     recall = tp / (tp + fn) if (tp + fn) >= 1 else 0.0
     f1 = (
         2 * (precision * recall) / (precision + recall)
-        if (precision + recall) >= 1
+        if (precision + recall) > 0
         else 0.0
     )
 
