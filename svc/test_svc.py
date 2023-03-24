@@ -26,7 +26,7 @@ class SVCTest(unittest.TestCase):
                 model_sk.fit(X=X_train, y=y_train)
 
                 y_pred_sk = model_sk.predict(X_test)
-                accuracy, precision, recall, f1 = score(
+                accuracy, precision, recall, f1, roc = score(
                     svc=model_sk, X=X_test, y=np.array(y_test).astype(bool)
                 )
                 print(
@@ -41,7 +41,7 @@ class SVCTest(unittest.TestCase):
                 self.assertEqual(model._opt_status, "optimal")
 
                 y_pred = model.predict(X_test)
-                accuracy, precision, recall, f1 = score(
+                accuracy, precision, recall, f1, roc = score(
                     svc=model, X=X_test, y=np.array(y_test).astype(bool)
                 )
                 print(
