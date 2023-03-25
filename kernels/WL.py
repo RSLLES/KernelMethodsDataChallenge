@@ -136,51 +136,84 @@ class WeisfeilerLehmanKernel(Kernel):
         return s
 
 
-class RBFWeisfeilerLehmanKernel(Kernel):
-    def __init__(self, depth: int, sigma: float = 1.0, *args, **kargs) -> None:
-        """
-        Implementation of the Weisfeiler-Lehman Graph Kernel at a given depth.
-        See the following paper : https://www.jmlr.org/papers/volume12/shervashidze11a/shervashidze11a.pdf
+# class Sin2WeisfeilerLehmanKernel(WeisfeilerLehmanKernel):
+#     def inner(self, counts1, counts2):
+#         s = 0
+#         for d, (c1, c2) in enumerate(zip(counts1, counts2)):
+#             s += sum(
+#                 [np.square(np.sin(c1[k] * c2[k] / 10 * (d + 1))) for k in c1 if k in c2]
+#             )
+#         return s
 
-        Parameters
-        ----------
-        depth : int
-            An integer representing the depth of iterations to be performed by Weisfeiler Lehman
-            algorithm. This should always be a non-negative integer.
-        """
-        assert (
-            isinstance(depth, int) and depth >= 0
-        ), "depth should be a non-negative integer"
 
-        self.depth = depth
-        self.gamma = 1.0 / (2 * sigma**2)
-        super().__init__(*args, **kargs)
+# class LogWeisfeilerLehmanKernel(WeisfeilerLehmanKernel):
+#     def inner(self, counts1, counts2):
+#         s = 0
+#         for c1, c2 in zip(counts1, counts2):
+#             s += sum([np.log(1 + c1[k] * c2[k]) for k in c1 if k in c2])
+#         return s
 
-    def phi(self, x: Graph, *args, **kargs) -> List[Counter]:
-        """
-        Generates the feature vector representation of given directed graph using Weisfeiler-Lehman graph
-        kernel.
 
-        Parameters
-        ----------
-        x : networkx.classes.graph.Graph
-            Input undirected graph to be represented in feature space
-
-        Returns
-        -------
-        list(collections.Counter) :
-            A list of counter objects where each counter representa the frequency of each labeled
-            substructure observed at `i-th` iteration.
-        """
-        labels = {n: x.nodes[n]["labels"][0] for n in x.nodes}
-        return WL_iterations(G=x, labels=labels, depth=self.depth)
-
+class MinWeisfeilerLehmanKernel(WeisfeilerLehmanKernel):
     def inner(self, counts1, counts2):
-        v = []
+        s = 0
         for c1, c2 in zip(counts1, counts2):
-            v += [(c1[k], c2[k]) for k in c1 if k in c2]
-        if len(v) == 0:
-            return 1.0
-        v = np.array(v).T
-        d = v[1] - v[0]
-        return np.exp(-self.gamma * np.dot(d, d))
+            s += sum([min(c1[k], c2[k]) for k in c1 if k in c2])
+        return s
+
+
+class MinMaxWeisfeilerLehmanKernel(WeisfeilerLehmanKernel):
+    def inner(self, counts1, counts2):
+        s = 0
+        for c1, c2 in zip(counts1, counts2):
+            s += sum([min(c1[k], c2[k]) / max(c1[k], c2[k]) for k in c1 if k in c2])
+        return s
+
+
+def inv(x):
+    return 0.5 / (1.01 - x) - 0.5 / (1.01 + x)
+
+
+class InvMinMaxWeisfeilerLehmanKernel(WeisfeilerLehmanKernel):
+    def inner(self, counts1, counts2):
+        s = 0
+        for c1, c2 in zip(counts1, counts2):
+            s += sum(
+                [inv(min(c1[k], c2[k]) / max(c1[k], c2[k])) for k in c1 if k in c2]
+            )
+        return s
+
+
+class ArithmWeisfeilerLehmanKernel(WeisfeilerLehmanKernel):
+    def inner(self, counts1, counts2):
+        v = 0
+        for c1, c2 in zip(counts1, counts2):
+            v += sum(
+                [np.gcd(c1[k], c2[k]) / np.lcm(c1[k], c2[k]) for k in c1 if k in c2]
+            )
+        return v
+
+
+# class RBFWeisfeilerLehmanKernel(WeisfeilerLehmanKernel):
+#     def inner(self, counts1, counts2):
+#         s = 0
+#         for c1, c2 in zip(counts1, counts2):
+#             t = sum([c1[k] * c2[k] for k in c1 if k in c2])
+#             s += np.exp(-t / 5)
+#         return s
+
+
+# def card_sin(x):
+#     if x == 0.0:
+#         return 1.0
+#     else:
+#         return np.sin(x) / x
+
+
+# class SincWeisfeilerLehmanKernel(WeisfeilerLehmanKernel):
+#     def inner(self, counts1, counts2):
+#         s = 0
+#         for d, (c1, c2) in enumerate(zip(counts1, counts2)):
+#             t = sum([c1[k] * c2[k] for k in c1 if k in c2])
+#             s += card_sin(t * (d + 1) / 10)
+#         return s
