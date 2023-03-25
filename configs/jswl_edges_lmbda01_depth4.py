@@ -6,10 +6,10 @@ y = "training_labels.pkl"
 k_folds_cross_val = 6
 
 ### Kernel ###
-from kernels.WWL import WassersteinWeisfeilerLehmanKernel
+from kernels.JSWL import JensenShannonWeisfeilerLehmanKernel
 
-kernel = WassersteinWeisfeilerLehmanKernel(
-    depth=0, use_cache=True, enable_edges_labels=True, lambd=1.0
+kernel = JensenShannonWeisfeilerLehmanKernel(
+    depth=4, lambd=0.1, enable_edges_labels=True, use_cache=True
 )
 
 ### Save ###

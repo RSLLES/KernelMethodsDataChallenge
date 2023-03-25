@@ -35,7 +35,7 @@ class Kernel:
         self.verbose = verbose
         self.processes = max(os.cpu_count() - 4, os.cpu_count() // 2, 1)
         if verbose:
-            print("[Init] Using f{self.process} cores.")
+            print(f"[Init] Using {self.processes} processes.")
 
     def reset_cache(self):
         """Reset the cache dictionary."""
