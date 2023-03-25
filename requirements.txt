@@ -9,3 +9,4 @@ pandas
 fire
 scikit-learn
 seaborn
+POT
