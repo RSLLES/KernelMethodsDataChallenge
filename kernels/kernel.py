@@ -75,7 +75,7 @@ class Kernel:
         self._z = [self.phi(x) for x in tqdm.tqdm(x, desc="Computing Embedding")]
 
         # Compute inner products with multiprocessing
-        self._K = np.zeros((n, n))
+        K = np.zeros((n, n))
         m = n // 2
         processes = os.cpu_count() - 4
 
@@ -97,21 +97,24 @@ class Kernel:
                         last_v = v
                     sleep(0.01)
                 pbar.update(pbar.total - pbar.n)
+        for values, r, c in zip(res.get(), R, C):
+            K[r, c] = values
 
         # Symmetry
         r, c = np.triu_indices(n, k=1)
-        self._K[c, r] = self._K[r, c]
+        K[c, r] = K[r, c]
 
-        return self._K
+        return K
 
     def solve(self, H):
         try:
             r, c = H
+            K = np.zeros((len(r),))
             for k, (i, j) in enumerate(zip(r, c)):
-                self._K[i, j] = self.inner(self._z[i], self._z[j])
+                K[k] = self.inner(self._z[i], self._z[j])
                 if k % 1500 == 0:
                     self.q.put(True)
-
+            return K
         except KeyboardInterrupt:
             print("Caught KeyboardInterrupt, terminating workers")
             return None
