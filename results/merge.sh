@@ -15,4 +15,4 @@ do
     fi
 done
 
-python ./results/ranking.py
+python ./results/add_information.py
