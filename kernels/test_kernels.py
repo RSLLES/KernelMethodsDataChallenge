@@ -75,10 +75,16 @@ class TestKernel(unittest.TestCase):
         np.testing.assert_equal(kernel.nb_heavy_call, self.nb_data)
         np.testing.assert_equal(kernel_wto_cache.nb_heavy_call, 2 * self.nb_data**2)
 
-    def test_multiprocess(self):
+    def test_multiprocess_with_phi_method(self):
         kernel = WeisfeilerLehmanKernel(depth=3)
         K1 = kernel(self.graphs, self.graphs)
         K2 = kernel(self.graphs)
+        np.testing.assert_allclose(K1, K2)
+
+    def test_multiprocess_with_kernel_method(self):
+        kernel = GaussianKernel(sigma=1.0)
+        K1 = kernel(self.X, self.X)
+        K2 = kernel(self.X)
         np.testing.assert_allclose(K1, K2)
 
 

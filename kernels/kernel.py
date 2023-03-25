@@ -58,9 +58,12 @@ class Kernel:
             if x2 is None:
                 return self._solo_phi(x1)
             else:
-                return self._phi_call(x1, x2, *args, **kwargs)
+                return self._phi(x1, x2, *args, **kwargs)
         elif hasattr(self, "kernel"):
-            return self._kernel_call(x1, x2, *args, **kwargs)
+            if x2 is None:
+                return self._solo_kernel(x1, *args, **kwargs)
+            else:
+                return self._kernel(x1, x2, *args, **kwargs)
         else:
             raise NotImplementedError(
                 "A subclass of `Kernel` should implement either a kernel or a phi and an inner functions."
@@ -85,7 +88,7 @@ class Kernel:
         with multiprocessing.Pool(processes=processes) as p:
             m = multiprocessing.Manager()
             self.q = m.Queue(maxsize=n * (n + 1) // 2)
-            res = p.map_async(self.solve, zip(R, C))
+            res = p.map_async(self._multi_inner, zip(R, C))
 
             # Wait
             with tqdm.tqdm(total=n * (n + 1) // 2, desc="Inner products") as pbar:
@@ -106,7 +109,7 @@ class Kernel:
 
         return K
 
-    def solve(self, H):
+    def _multi_inner(self, H):
         try:
             r, c = H
             K = np.zeros((len(r),))
@@ -119,7 +122,7 @@ class Kernel:
             print("Caught KeyboardInterrupt, terminating workers")
             return None
 
-    def _phi_call(self, x1, x2, *args, **kwargs):
+    def _phi(self, x1, x2, *args, **kwargs):
         """
         Handle computation for the phi and inner case.
 
@@ -133,10 +136,10 @@ class Kernel:
             An array of embedded points.
         """
         if isinstance(x1, list):
-            results = [self._phi_call(x1=item, x2=x2, *args, **kwargs) for item in x1]
+            results = [self._phi(x1=item, x2=x2, *args, **kwargs) for item in x1]
             return np.array(results)
         elif isinstance(x2, list):
-            results = [self._phi_call(x1=x1, x2=item, *args, **kwargs) for item in x2]
+            results = [self._phi(x1=x1, x2=item, *args, **kwargs) for item in x2]
             return np.array(results)
 
         if self.use_cache:
@@ -163,7 +166,58 @@ class Kernel:
 
         return np.array(kernel_value)
 
-    def _kernel_call(self, x1, x2, *args, **kwargs):
+    def _solo_kernel(self, x):
+        assert isinstance(x, list)
+        n = len(x)
+        self._X = x
+        self.granularite = max(100, n * (n + 1) // 2 // 2000 // 4)
+
+        # Compute inner products with multiprocessing
+        K = np.zeros((n, n))
+        m = n // 2
+        processes = os.cpu_count() - 4
+
+        R, C = np.triu_indices(n)
+        R, C = np.array_split(R, processes), np.array_split(C, processes)
+
+        with multiprocessing.Pool(processes=processes) as p:
+            m = multiprocessing.Manager()
+            self.q = m.Queue(maxsize=n * (n + 1) // 2)
+            res = p.map_async(self._multi_kernel, zip(R, C))
+
+            # Wait
+            with tqdm.tqdm(total=n * (n + 1) // 2, desc="Fitting Kernel") as pbar:
+                last_v, v = 0, 0
+                while not res.ready():
+                    v = self.q.qsize()
+                    if v > last_v:
+                        pbar.update(self.granularite * (v - last_v))
+                        last_v = v
+                    sleep(0.01)
+                pbar.update(pbar.total - pbar.n)
+        for values, r, c in zip(res.get(), R, C):
+            K[r, c] = values
+
+        # Symmetry
+        r, c = np.triu_indices(n, k=1)
+        K[c, r] = K[r, c]
+
+        return K
+
+    def _multi_kernel(self, H):
+        try:
+            r, c = H
+            K = np.zeros((len(r),))
+            for k, (i, j) in enumerate(zip(r, c)):
+                K[k] = self.kernel(self._X[i], self._X[j])
+                if k % 1500 == 0:
+                    self.q.put(True)
+            return K
+        except KeyboardInterrupt:
+            print("Caught KeyboardInterrupt, terminating workers")
+            return None
+
+    def _kernel(self, x1, x2, *args, **kwargs):
         """
         Handle computation for the kernel case.
 
@@ -177,14 +231,10 @@ class Kernel:
             A scalar output of the kernel function.
         """
         if isinstance(x1, list):
-            results = [
-                self._kernel_call(x1=item, x2=x2, *args, **kwargs) for item in x1
-            ]
+            results = [self._kernel(x1=item, x2=x2, *args, **kwargs) for item in x1]
             return np.array(results)
         elif isinstance(x2, list):
-            results = [
-                self._kernel_call(x1=x1, x2=item, *args, **kwargs) for item in x2
-            ]
+            results = [self._kernel(x1=x1, x2=item, *args, **kwargs) for item in x2]
             return np.array(results)
 
         if self.use_cache:
