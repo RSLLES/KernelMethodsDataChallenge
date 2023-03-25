@@ -20,7 +20,11 @@ class Kernel:
     """
 
     def __init__(
-        self, use_cache: bool = False, multiprocess: bool = False, verbose: bool = True
+        self,
+        use_cache: bool = False,
+        multiprocess: bool = False,
+        verbose: bool = True,
+        processess: int = None,
     ):
         """
         Initialize the Kernel instance.
@@ -33,7 +37,7 @@ class Kernel:
         self.reset_cache()
         self.nb_heavy_call = 0
         self.verbose = verbose
-        self.processes = max(os.cpu_count() - 4, os.cpu_count() // 2, 1)
+        self.processes = processess or max(os.cpu_count() - 4, os.cpu_count() // 2, 1)
         if verbose:
             print(f"[Init] Using {self.processes} processes.")
 
