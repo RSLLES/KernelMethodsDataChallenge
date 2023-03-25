@@ -69,77 +69,49 @@ class Kernel:
     def _solo_phi(self, x):
         assert isinstance(x, list)
         n = len(x)
-        self.granularite = max(1, n * (n + 1) // 2 // 2000 // 4)
+        self.granularite = max(100, n * (n + 1) // 2 // 2000 // 4)
 
         # Compute embedding
-        z = [self.phi(x) for x in tqdm.tqdm(x, desc="Computing Embedding")]
+        self._z = [self.phi(x) for x in tqdm.tqdm(x, desc="Computing Embedding")]
 
         # Compute inner products with multiprocessing
+        self._K = np.zeros((n, n))
         m = n // 2
+        processes = os.cpu_count() - 4
 
-        K = np.zeros((n, n))
+        R, C = np.triu_indices(n)
+        R, C = np.array_split(R, processes), np.array_split(C, processes)
 
-        # Processess
-        pool = multiprocessing.Pool(4)
-        manager = multiprocessing.Manager()
-        self.q = manager.Queue()
+        with multiprocessing.Pool(processes=processes) as p:
+            m = multiprocessing.Manager()
+            self.q = m.Queue(maxsize=n * (n + 1) // 2)
+            res = p.map_async(self.solve, zip(R, C))
 
-        nord_ouest = pool.apply_async(self.solve_triangular, (z[:m], z[:m]))
-        sud_est = pool.apply_async(self.solve_triangular, (z[m:], z[m:]))
-        nord_est = pool.apply_async(self.solve_triangular, (z[:m], z[m:]))
-        center = pool.apply_async(self.solve_triangular, (z[:m], z[m:], False))
-
-        last_v, v = 0, 0
-        with tqdm.tqdm(desc="Inner product", total=n * (n + 1) // 2) as pbar:
-            while (
-                not nord_ouest.ready()
-                and not sud_est.ready()
-                and not nord_est.ready()
-                and not center.ready()
-            ):
-                v = self.q.qsize()
-                if v > last_v:
-                    pbar.update(self.granularite * (v - last_v))
-                    last_v = v
-                sleep(0.01)
-            pbar.update(pbar.total - pbar.n)
-
-        K[:m, :m] += nord_ouest.get()
-        K[m:, m:] += sud_est.get()
-        K[:m, m:] += nord_est.get()
-        K[:m, m:] += center.get()
-
-        pool.close()
+            # Wait
+            with tqdm.tqdm(total=n * (n + 1) // 2, desc="Inner products") as pbar:
+                last_v, v = 0, 0
+                while not res.ready():
+                    v = self.q.qsize()
+                    if v > last_v:
+                        pbar.update(self.granularite * (v - last_v))
+                        last_v = v
+                    sleep(0.01)
+                pbar.update(pbar.total - pbar.n)
 
         # Symmetry
         r, c = np.triu_indices(n, k=1)
-        K[c, r] = K[r, c]
+        self._K[c, r] = self._K[r, c]
 
-        return K
+        return self._K
 
-    def solve_triangular(self, X, Y, upper=True):
+    def solve(self, H):
         try:
-            assert len(X) == len(Y)
-            n = len(X)
-            K = np.zeros((n, n))
-            if upper:
-                gen = list(
-                    (i, j)
-                    for i, j in itertools.product(range(len(X)), range(len(Y)))
-                    if i <= j
-                )
-            else:
-                gen = list(
-                    (i, j)
-                    for i, j in itertools.product(range(len(X)), range(len(Y)))
-                    if i > j
-                )
-            for k, (i, j) in enumerate(gen):
-                K[i, j] = self.inner(X[i], Y[j])
-                if k % self.granularite == 0:
-                    self.q.put_nowait(True)
+            r, c = H
+            for k, (i, j) in enumerate(zip(r, c)):
+                self._K[i, j] = self.inner(self._z[i], self._z[j])
+                if k % 1500 == 0:
+                    self.q.put(True)
 
-            return K
         except KeyboardInterrupt:
             print("Caught KeyboardInterrupt, terminating workers")
             return None
