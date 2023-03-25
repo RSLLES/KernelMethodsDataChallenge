@@ -1,4 +1,9 @@
+import itertools
 import numpy as np
+import multiprocessing
+import tqdm
+from time import sleep
+import os
 
 
 class Kernel:
@@ -14,7 +19,7 @@ class Kernel:
     Note that caching and recursion if inputs are lists are automatically handled by this class.
     """
 
-    def __init__(self, use_cache: bool = False):
+    def __init__(self, use_cache: bool = False, multiprocess: bool = False):
         """
         Initialize the Kernel instance.
 
@@ -22,6 +27,7 @@ class Kernel:
             use_cache (bool): Whether to use caching for phi or kernel calls.
         """
         self.use_cache = use_cache
+        self.multiprocess = multiprocess
         self.reset_cache()
         self.nb_heavy_call = 0
 
@@ -30,7 +36,7 @@ class Kernel:
         if self.use_cache:
             self.cache = {}
 
-    def __call__(self, x1, x2, *args, **kwargs):
+    def __call__(self, x1, x2=None, *args, **kwargs):
         """
         Call the Kernel instance.
 
@@ -49,13 +55,94 @@ class Kernel:
             it will raise a NotImplementedError.
         """
         if hasattr(self, "phi") and hasattr(self, "inner"):
-            return self._phi_call(x1, x2, *args, **kwargs)
+            if x2 is None:
+                return self._solo_phi(x1)
+            else:
+                return self._phi_call(x1, x2, *args, **kwargs)
         elif hasattr(self, "kernel"):
             return self._kernel_call(x1, x2, *args, **kwargs)
         else:
             raise NotImplementedError(
                 "A subclass of `Kernel` should implement either a kernel or a phi and an inner functions."
             )
+
+    def _solo_phi(self, x):
+        assert isinstance(x, list)
+        n = len(x)
+        self.granularite = max(1, n * (n + 1) // 2 // 2000 // 4)
+
+        # Compute embedding
+        z = [self.phi(x) for x in tqdm.tqdm(x, desc="Computing Embedding")]
+
+        # Compute inner products with multiprocessing
+        m = n // 2
+
+        K = np.zeros((n, n))
+
+        # Processess
+        pool = multiprocessing.Pool(4)
+        manager = multiprocessing.Manager()
+        self.q = manager.Queue()
+
+        nord_ouest = pool.apply_async(self.solve_triangular, (z[:m], z[:m]))
+        sud_est = pool.apply_async(self.solve_triangular, (z[m:], z[m:]))
+        nord_est = pool.apply_async(self.solve_triangular, (z[:m], z[m:]))
+        center = pool.apply_async(self.solve_triangular, (z[:m], z[m:], False))
+
+        last_v, v = 0, 0
+        with tqdm.tqdm(desc="Inner product", total=n * (n + 1) // 2) as pbar:
+            while (
+                not nord_ouest.ready()
+                and not sud_est.ready()
+                and not nord_est.ready()
+                and not center.ready()
+            ):
+                v = self.q.qsize()
+                if v > last_v:
+                    pbar.update(self.granularite * (v - last_v))
+                    last_v = v
+                sleep(0.01)
+            pbar.update(pbar.total - pbar.n)
+
+        K[:m, :m] += nord_ouest.get()
+        K[m:, m:] += sud_est.get()
+        K[:m, m:] += nord_est.get()
+        K[:m, m:] += center.get()
+
+        pool.close()
+
+        # Symmetry
+        r, c = np.triu_indices(n, k=1)
+        K[c, r] = K[r, c]
+
+        return K
+
+    def solve_triangular(self, X, Y, upper=True):
+        try:
+            assert len(X) == len(Y)
+            n = len(X)
+            K = np.zeros((n, n))
+            if upper:
+                gen = list(
+                    (i, j)
+                    for i, j in itertools.product(range(len(X)), range(len(Y)))
+                    if i <= j
+                )
+            else:
+                gen = list(
+                    (i, j)
+                    for i, j in itertools.product(range(len(X)), range(len(Y)))
+                    if i > j
+                )
+            for k, (i, j) in enumerate(gen):
+                K[i, j] = self.inner(X[i], Y[j])
+                if k % self.granularite == 0:
+                    self.q.put_nowait(True)
+
+            return K
+        except KeyboardInterrupt:
+            print("Caught KeyboardInterrupt, terminating workers")
+            return None
 
     def _phi_call(self, x1, x2, *args, **kwargs):
         """
@@ -131,6 +218,7 @@ class Kernel:
             if h in self.cache:
                 return self.cache[h]
 
+        self.nb_heavy_call += 1
         kernel_value = self.kernel(x1=x1, x2=x2, *args, **kwargs)
 
         if self.use_cache:

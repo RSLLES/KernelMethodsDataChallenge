@@ -121,18 +121,7 @@ class SVC:
         y = self._check_labels(y)
 
         # Compute Kernel
-        K = np.zeros(shape=(n, n), dtype=np.float64)
-        idx_itor = itertools.combinations_with_replacement(range(n), 2)
-        if self.verbose:
-            idx_itor = tqdm(
-                idx_itor,
-                desc="[SVC.fit] Computing train kernel...",
-                total=n * (n + 1) / 2,
-            )
-
-        for i, j in idx_itor:
-            K[i, j] = self.kernel(X[i], X[j])
-            K[j, i] = K[i, j]
+        K = self.kernel(X)
         SVC._check_kernel(K)
 
         # Dual problem definition
@@ -161,7 +150,10 @@ class SVC:
         if self.verbose:
             print("[SVC.fit] Solving dual problem...")
         dual_problem = cvx.Problem(dual_objective, dual_constraints)
-        dual_problem.solve(solver=cvx.OSQP, eps_abs=max(self.epsilon / 100, 10 * sys.float_info.epsilon))
+        dual_problem.solve(
+            solver=cvx.OSQP,
+            eps_abs=max(self.epsilon / 100, 10 * sys.float_info.epsilon),
+        )
 
         if self.verbose:
             if dual_problem.status != "optimal":
@@ -188,9 +180,24 @@ class SVC:
 
         if len(self._support_vecs) == 0:
             # this can happen when all dual coefficients are close to C
-            neg_idx = np.argmax([f(self._separating_vecs[i]) for i in range(len(self._separating_vecs)) if y[i] == -1])
-            pos_idx = np.argmin([f(self._separating_vecs[i]) for i in range(len(self._separating_vecs)) if y[i] == 1])
-            self._support_vecs = [self._separating_vecs[neg_idx], self._separating_vecs[pos_idx]]
+            neg_idx = np.argmax(
+                [
+                    f(self._separating_vecs[i])
+                    for i in range(len(self._separating_vecs))
+                    if y[i] == -1
+                ]
+            )
+            pos_idx = np.argmin(
+                [
+                    f(self._separating_vecs[i])
+                    for i in range(len(self._separating_vecs))
+                    if y[i] == 1
+                ]
+            )
+            self._support_vecs = [
+                self._separating_vecs[neg_idx],
+                self._separating_vecs[pos_idx],
+            ]
             self._offset = -0.5 * (f(self._support_vecs[0]) + f(self._support_vecs[1]))
         else:
             # compute b (hyperplane offset) : for x0 a support vector, y0 (f(x0) + b) = -1
