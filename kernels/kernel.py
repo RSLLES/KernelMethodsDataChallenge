@@ -19,7 +19,9 @@ class Kernel:
     Note that caching and recursion if inputs are lists are automatically handled by this class.
     """
 
-    def __init__(self, use_cache: bool = False, multiprocess: bool = False):
+    def __init__(
+        self, use_cache: bool = False, multiprocess: bool = False, verbose: bool = True
+    ):
         """
         Initialize the Kernel instance.
 
@@ -30,6 +32,10 @@ class Kernel:
         self.multiprocess = multiprocess
         self.reset_cache()
         self.nb_heavy_call = 0
+        self.verbose = verbose
+        self.processes = max(os.cpu_count() - 4, os.cpu_count() // 2, 1)
+        if verbose:
+            print("[Init] Using f{self.process} cores.")
 
     def reset_cache(self):
         """Reset the cache dictionary."""
@@ -69,29 +75,48 @@ class Kernel:
                 "A subclass of `Kernel` should implement either a kernel or a phi and an inner functions."
             )
 
+    def _tqdm(self, gen, *args, **kargs):
+        if self.verbose:
+            return tqdm.tqdm(gen, *args, **kargs)
+        return gen
+
     def _solo_phi(self, x):
         assert isinstance(x, list)
         n = len(x)
         self.granularite = max(100, n * (n + 1) // 2 // 2000 // 4)
 
         # Compute embedding
-        self._z = [self.phi(x) for x in tqdm.tqdm(x, desc="Computing Embedding")]
+        def work_with_cache(x):
+            if self.use_cache:
+                h = hash(x)
+                if h not in self.cache:
+                    self.cache[h] = self.phi(x)
+                    self.nb_heavy_call += 1
+                return self.cache[h]
+            self.nb_heavy_call += 1
+            return self.phi(x)
+
+        self._z = [
+            work_with_cache(x)
+            for x in self._tqdm(x, desc="[Fit_Phi] Computing Embedding")
+        ]
 
         # Compute inner products with multiprocessing
         K = np.zeros((n, n))
         m = n // 2
-        processes = os.cpu_count() - 4
 
         R, C = np.triu_indices(n)
-        R, C = np.array_split(R, processes), np.array_split(C, processes)
+        R, C = np.array_split(R, self.processes), np.array_split(C, self.processes)
 
-        with multiprocessing.Pool(processes=processes) as p:
+        with multiprocessing.Pool(processes=self.processes) as p:
             m = multiprocessing.Manager()
             self.q = m.Queue(maxsize=n * (n + 1) // 2)
-            res = p.map_async(self._multi_inner, zip(R, C))
+            res = p.map_async(self._multi_inner_solo, zip(R, C))
 
             # Wait
-            with tqdm.tqdm(total=n * (n + 1) // 2, desc="Inner products") as pbar:
+            with tqdm.tqdm(
+                total=n * (n + 1) // 2, desc="[Fit_Phi] Computing Inner products"
+            ) as pbar:
                 last_v, v = 0, 0
                 while not res.ready():
                     v = self.q.qsize()
@@ -109,62 +134,99 @@ class Kernel:
 
         return K
 
-    def _multi_inner(self, H):
+    def _multi_inner_solo(self, H):
         try:
             r, c = H
             K = np.zeros((len(r),))
             for k, (i, j) in enumerate(zip(r, c)):
                 K[k] = self.inner(self._z[i], self._z[j])
-                if k % 1500 == 0:
+                if k % self.granularite == 0:
                     self.q.put(True)
             return K
         except KeyboardInterrupt:
             print("Caught KeyboardInterrupt, terminating workers")
             return None
 
-    def _phi(self, x1, x2, *args, **kwargs):
+    def _phi(self, x1, x2):
         """
         Handle computation for the phi and inner case.
 
         Parameters:
             x1: First input of the kernel method.
             x2: Second input of the kernel method.
-            *args: Variable-length argument list.
-            **kwargs: Arbitrary keyword arguments.
 
         Returns:
             An array of embedded points.
         """
-        if isinstance(x1, list):
-            results = [self._phi(x1=item, x2=x2, *args, **kwargs) for item in x1]
-            return np.array(results)
-        elif isinstance(x2, list):
-            results = [self._phi(x1=x1, x2=item, *args, **kwargs) for item in x2]
-            return np.array(results)
+        if not isinstance(x1, list):
+            x1 = [x1]
+        if not isinstance(x2, list):
+            x2 = [x2]
 
-        if self.use_cache:
-            h1, h2 = hash(x1), hash(x2)
-            if h1 in self.cache:
-                xp1 = self.cache[h1]
-            else:
-                self.nb_heavy_call += 1
-                xp1 = self.phi(x1, *args, **kwargs)
-                self.cache[h1] = xp1
+        n, m = len(x1), len(x2)
+        self.granularite = max(100, n * m // 2000 // 4)
 
-            if h2 in self.cache:
-                xp2 = self.cache[h2]
-            else:
-                self.nb_heavy_call += 1
-                xp2 = self.phi(x2, *args, **kwargs)
-                self.cache[h2] = xp2
-        else:
-            self.nb_heavy_call += 2
-            xp1 = self.phi(x1, *args, **kwargs)
-            xp2 = self.phi(x2, *args, **kwargs)
+        # Compute embedding
+        def work_with_cache(x):
+            if self.use_cache:
+                h = hash(x)
+                if h not in self.cache:
+                    self.nb_heavy_call += 1
+                    self.cache[h] = self.phi(x)
+                return self.cache[h]
+            self.nb_heavy_call += 1
+            return self.phi(x)
 
-        kernel_value = self.inner(xp1, xp2)
+        self._z1 = [
+            work_with_cache(x)
+            for x in self._tqdm(x1, desc="[Transform_Phi] Computing Embedding 1")
+        ]
 
-        return np.array(kernel_value)
+        self._z2 = [
+            work_with_cache(x)
+            for x in self._tqdm(x2, desc="[Transform_Phi] Computing Embedding 2")
+        ]
+
+        # Compute inner products with multiprocessing
+        K = np.zeros((n, m))
+
+        R, C = np.array(list(np.ndindex(K.shape))).T
+        R, C = np.array_split(R, self.processes), np.array_split(C, self.processes)
+
+        with multiprocessing.Pool(processes=self.processes) as p:
+            man = multiprocessing.Manager()
+            self.q = man.Queue(maxsize=n * m)
+            res = p.map_async(self._multi_inner, zip(R, C))
+
+            # Wait
+            with tqdm.tqdm(
+                total=n * m, desc="[Transform_Phi] Computing Inner products"
+            ) as pbar:
+                last_v, v = 0, 0
+                while not res.ready():
+                    v = self.q.qsize()
+                    if v > last_v:
+                        pbar.update(self.granularite * (v - last_v))
+                        last_v = v
+                    sleep(0.01)
+                pbar.update(pbar.total - pbar.n)
+        for values, r, c in zip(res.get(), R, C):
+            K[r, c] = values
+
+        return K.squeeze()
+
+    def _multi_inner(self, H):
+        try:
+            r, c = H
+            K = np.zeros((len(r),))
+            for k, (i, j) in enumerate(zip(r, c)):
+                K[k] = self.inner(self._z1[i], self._z2[j])
+                if k % self.granularite == 0:
+                    self.q.put(True)
+            return K
+        except KeyboardInterrupt:
+            print("Caught KeyboardInterrupt, terminating workers")
+            return None
 
     def _solo_kernel(self, x):
         assert isinstance(x, list)
@@ -175,18 +237,17 @@ class Kernel:
         # Compute inner products with multiprocessing
         K = np.zeros((n, n))
         m = n // 2
-        processes = os.cpu_count() - 4
 
         R, C = np.triu_indices(n)
-        R, C = np.array_split(R, processes), np.array_split(C, processes)
+        R, C = np.array_split(R, self.processes), np.array_split(C, self.processes)
 
-        with multiprocessing.Pool(processes=processes) as p:
+        with multiprocessing.Pool(processes=self.processes) as p:
             m = multiprocessing.Manager()
             self.q = m.Queue(maxsize=n * (n + 1) // 2)
             res = p.map_async(self._multi_kernel, zip(R, C))
 
             # Wait
-            with tqdm.tqdm(total=n * (n + 1) // 2, desc="Fitting Kernel") as pbar:
+            with tqdm.tqdm(total=n * (n + 1) // 2, desc="[Fit] Kernel") as pbar:
                 last_v, v = 0, 0
                 while not res.ready():
                     v = self.q.qsize()

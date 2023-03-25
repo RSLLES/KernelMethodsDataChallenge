@@ -70,17 +70,7 @@ class SVC:
         """
         n_sep = len(self._separating_vecs)
         n_points = len(X)
-        kernel_eval = np.zeros((n_sep, n_points), dtype=np.float32)
-        idx_itor = itertools.product(range(n_sep), range(n_points))
-        if self.verbose:
-            idx_itor = tqdm(
-                idx_itor,
-                desc="[SVC.predict] Computing kernel...",
-                total=n_sep * n_points,
-            )
-
-        for i, j in idx_itor:
-            kernel_eval[i, j] = self.kernel(self._separating_vecs[i], X[j])
+        kernel_eval = self.kernel(self._separating_vecs, X)
 
         return (
             np.sum(self._separating_weights[:, None] * kernel_eval, axis=0)
