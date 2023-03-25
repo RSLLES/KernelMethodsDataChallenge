@@ -14,3 +14,5 @@ do
         echo "" >> $f
     fi
 done
+
+python ./results/ranking.py
