@@ -2,7 +2,7 @@
 ## Authors
 
 - Louis BLAZEJCZAK-BOULEGUE, [GitHub profile](https://github.com/louisbzk)
-- Romain SEAILLES (RSLLES) [GitHub profile](https://github.com/RSLLES) 
+- Romain SEAILLES [GitHub profile](https://github.com/RSLLES) 
 
 Feel free to contact us if you have any questions or feedback about our solution.
 
