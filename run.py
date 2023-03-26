@@ -66,7 +66,7 @@ def get_summary(scores):
     return df.to_markdown(index=False)
 
 
-def run(config, performance, predict, filename, verbose):
+def run(config, performance, predict, filename, verbose, processes):
     """
     Runs the entire pipeline for training and testing a classifier.
     """
@@ -76,6 +76,7 @@ def run(config, performance, predict, filename, verbose):
     print("Loading data...")
     ds, ds_val = load_data(config=config)
     kernel = config.kernel
+    kernel.set_processes(processes)
 
     # Training
     if performance:
@@ -106,7 +107,8 @@ def main(
     performance: bool = True,
     predict: bool = False,
     verbose: bool = True,
-):
+    processes: int = None,
+) -> None:
     """
     Trains and validates a Support Vector Classifier using the provided configuration file.
 
@@ -115,6 +117,10 @@ def main(
         performance (bool, optional): Whether or not to estimate the performance of the model (default True)
         predict (bool, optional): Whether or not to predict outputs for validation data (default False)
         verbose (bool, optional): Whether or not to display progress bars during performance estimation or final prediction (default True)
+        processes (int, optional): Number of processes to use for training. If set to None(default), it is set to max(1, your_cpu_cores - 4, your_cpu_cores //2). If set to an integer, program will use that many number of processes. If set to -1, processes is set to the maximum number of CPU available on the device. Note: Setting it to -1 on personal laptops may cause CPU overruns.
+
+    Returns:
+        None
     """
 
     filename, _ = os.path.splitext(os.path.basename(config_path))
@@ -130,6 +136,7 @@ def main(
         filename=filename,
         verbose=verbose,
         performance=performance,
+        processes=processes,
     )
 
 

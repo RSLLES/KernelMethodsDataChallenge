@@ -24,7 +24,7 @@ class Kernel:
         use_cache: bool = False,
         multiprocess: bool = False,
         verbose: bool = True,
-        processess: int = None,
+        processes: int = None,
     ):
         """
         Initialize the Kernel instance.
@@ -37,9 +37,17 @@ class Kernel:
         self.reset_cache()
         self.nb_heavy_call = 0
         self.verbose = verbose
-        self.processes = processess or max(os.cpu_count() - 4, os.cpu_count() // 2, 1)
-        if verbose:
-            print(f"[Init] Using {self.processes} processes.")
+        self.set_processes(processes)
+
+    def set_processes(self, processes):
+        assert processes is None or isinstance(processes, int)
+        if not hasattr(self, "processes") or processes != self.processes:
+            self.processes = processes or max(
+                os.cpu_count() - 4, os.cpu_count() // 2, 1
+            )
+            if self.processes == -1:
+                self.processes = os.cpu_count()
+            print(f"Switching to {self.processes} processes.")
 
     def set_verbose(self, verbose):
         assert isinstance(verbose, bool)
