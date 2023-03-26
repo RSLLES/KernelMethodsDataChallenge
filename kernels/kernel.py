@@ -37,7 +37,7 @@ class Kernel:
         self.reset_cache()
         self.nb_heavy_call = 0
         self.verbose = verbose
-        self.processes = processess or max(os.cpu_count() - 4, os.cpu_count() // 2, 1)
+        self.processes = os.cpu_count()
         if verbose:
             print(f"[Init] Using {self.processes} processes.")
 
