@@ -2,9 +2,11 @@ import numpy as np
 import re
 import pandas as pd
 import seaborn as sns
+import os
 
 
 def ranking(data, cols=["Method", "Accuracy", "Precision", "Recall", "F1", "ROCAUC"]):
+    print("Ranking ...")
     tables = re.findall(r"##\s*(.+?)\n\|(?:.*?\|)+\n((?:\|.*?\|\n)+)", data)
 
     results_df = []
@@ -33,11 +35,22 @@ def ranking(data, cols=["Method", "Accuracy", "Precision", "Recall", "F1", "ROCA
 
 
 def corr_matrix(results_df, path="./results/corr_matrix.png"):
+    print("Correlation matrix ...")
+
     def import_results(method_name):
         df = pd.read_csv(f"./export/{method_name}.csv")
         return df["Predicted"].to_numpy()
 
     methods = list(results_df["Method"])
+    methods_warning = [
+        method for method in methods if not os.path.isfile(f"./export/{method}.csv")
+    ]
+    if len(methods_warning) > 0:
+        for method in methods_warning:
+            print(
+                f"Warning : {method} found in results/ but not in export/. It is ignored in the correlation matrix."
+            )
+    methods = [method for method in methods if os.path.isfile(f"./export/{method}.csv")]
     # methods.sort()
     values = np.array([import_results(method) for method in methods]).T
     df_values = pd.DataFrame(values, columns=methods)
