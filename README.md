@@ -1,14 +1,14 @@
-# Kernel Methods : Data Challenge
+# Kernel Methods 2022-2023 : Data Challenge 
 ## Authors
 
 - Louis BLAZEJCZAK-BOULEGUE, [GitHub profile](https://github.com/louisbzk)
-- Romain SEAILLES [GitHub profile](https://github.com/RSLLES) 
+- Romain SEAILLES, [GitHub profile](https://github.com/RSLLES) 
 
-Feel free to contact us if you have any questions or feedback about our solution.
+Feel free to contact us if you have any questions about our solution.
 
 ## Installation
 
-To run the Support Vector Classifier, create a Python virtual environment for this project.
+Create a Python virtual environment for this project.
 
 ```sh
 python -m venv env
@@ -27,18 +27,34 @@ You can view the results of our kernels performance comparison in the `./results
 
 ## Running
 
-You can run the `run.py` script located at the root of the project. 
-The script trains and validates a Support Vector Classifier based on the configuration provided by the config file specified as argument.
+To run the `run.py` script located at the root of the project, use the following command:
 
 ```sh
 python3 run.py path/to/config_file.py
 ```
 
-By default, the script will *not* make predictions for validation data. To make the script predict outputs, add the flag `--predict`.
+The script trains and validates a Support Vector Classifier based on the configuration provided by the config file specified as an argument.
+
+### Estimating Model Performance
+
+The script estimates the performance of the model by default. To disable performance estimation, add the flag `--no-performance` when running the script as follows:
+
+```sh
+python3 run.py path/to/config_file.py --no-performance
+```
+
+### Predicting Outputs
+
+By default, the script will *not* make predictions for validation data. To enable making predictions for validation data, add the flag `--predict` when running the script as follows:
 
 ```sh
 python3 run.py path/to/config_file.py --predict
 ```
+
+### Verbosity
+
+You can also choose to display progress bars during performance estimation or final prediction using the flag `--verbose`. It is enabled by default. To disable progress bar display, add the flag `--no-verbose`.
+
 
 ## Configuration
 

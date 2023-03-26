@@ -108,15 +108,13 @@ def main(
     verbose: bool = True,
 ):
     """
-    This Python script trains and validates a Support Vector Classifier.
-    It uses the configuration provided by the file provided as argument.
-    This configuration file composition is described by the documentation on
-    our github repository.
+    Trains and validates a Support Vector Classifier using the provided configuration file.
 
     Args:
-        config_path (str): Path to python module describing configuration for current run.
-        predict (bool, default : False) : Whether or not to predict outputs for validation data.
-        verbose (bool, default : True) : Whether or not to display progress bars during performances estimation or final prediction.
+        config_path (str): Path to Python module describing the configuration for the current run
+        performance (bool, optional): Whether or not to estimate the performance of the model (default True)
+        predict (bool, optional): Whether or not to predict outputs for validation data (default False)
+        verbose (bool, optional): Whether or not to display progress bars during performance estimation or final prediction (default True)
     """
 
     filename, _ = os.path.splitext(os.path.basename(config_path))
