@@ -10,3 +10,4 @@ fire
 scikit-learn
 seaborn
 POT
+bayesian-optimization
