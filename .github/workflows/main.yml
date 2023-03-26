@@ -10,7 +10,8 @@ permissions:
   contents: read
 
 jobs:
-  build:
+  jswl_edges_depth5:
+    name: jswl_edges_depth5
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -25,6 +26,26 @@ jobs:
     - name: Install dependencies
       run: |
         pip install -r requirements.txt
-    - name: Run
+    - name: jswl_edges_depth5
       run: |
-        python run.py ./configs/wl_depth4.py 
+        python run.py ./configs/jswl_edges_depth5.py --nopredict --noverbose
+        
+  jswl_edges_depth6:
+    name: jswl_edges_depth6
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.10"]
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v3
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install dependencies
+      run: |
+        pip install -r requirements.txt
+    - name: jswl_edges_depth6
+      run: |
+        python run.py ./configs/jswl_edges_depth6.py --nopredict --noverbose
