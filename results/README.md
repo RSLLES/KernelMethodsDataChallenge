@@ -13,6 +13,7 @@
 | [wwl_edges_lmbda2_depth8](#wwl_edges_lmbda2_depth8)     |       93.2 |        90   |     30.4 | 45.3 |     91.4 |
 | [wwl_edges_depth4](#wwl_edges_depth4)                   |       93.1 |        87.8 |     28.9 | 43.3 |     91.3 |
 | [wwl_edges_lmbda05_depth4](#wwl_edges_lmbda05_depth4)   |       91.8 |        93.4 |     12.5 | 22.1 |     91   |
+| [jswl_edges_depth2](#jswl_edges_depth2)                 |       93.8 |        81.6 |     41.9 | 55.4 |     90.9 |
 | [wwl_edges_depth3](#wwl_edges_depth3)                   |       93.1 |        87.6 |     29.9 | 44.5 |     90.9 |
 | [wwl_edges_lmbda01_depth4](#wwl_edges_lmbda01_depth4)   |       90.8 |         0   |      0   |  0   |     90.8 |
 | [jswl_edges_depth4](#jswl_edges_depth4)                 |       93   |        85.7 |     29.6 | 43.9 |     90.7 |
@@ -79,6 +80,16 @@
 | Fold 5  | 93.0%      | 62.2%       | 56.7%    | 59.3% | 88.2%    |
 | Fold 6  | 91.6%      | 54.1%       | 50.5%    | 52.3% | 85.7%    |
 | Average | 81.0%      | 43.9%       | 65.5%    | 46.6% | 86.7%    |
+## jswl_edges_depth2
+|         | Accuracy   | Precision   | Recall   | F1    | ROCAUC   |
+|:--------|:-----------|:------------|:---------|:------|:---------|
+| Fold 1  | 94.4%      | 73.7%       | 37.8%    | 50.0% | 89.3%    |
+| Fold 2  | 93.0%      | 82.8%       | 44.4%    | 57.8% | 91.9%    |
+| Fold 3  | 94.3%      | 80.4%       | 43.5%    | 56.5% | 91.6%    |
+| Fold 4  | 92.7%      | 79.3%       | 43.0%    | 55.8% | 91.7%    |
+| Fold 5  | 94.7%      | 95.1%       | 43.3%    | 59.5% | 89.3%    |
+| Fold 6  | 93.5%      | 78.3%       | 39.6%    | 52.6% | 91.5%    |
+| Average | 93.8%      | 81.6%       | 41.9%    | 55.4% | 90.9%    |
 ## jswl_edges_depth3
 |         | Accuracy   | Precision   | Recall   | F1    | ROCAUC   |
 |:--------|:-----------|:------------|:---------|:------|:---------|
