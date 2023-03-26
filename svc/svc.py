@@ -6,6 +6,7 @@ from kernels.kernels import LinearKernel, GaussianKernel, PolynomialKernel
 import itertools
 from tqdm import tqdm
 from sklearn.metrics import roc_auc_score
+import warnings
 
 
 class SVC:
@@ -38,6 +39,8 @@ class SVC:
         self.penalty = penalty.lower()
         self.epsilon = epsilon
         self.verbose = verbose
+        self.kernel.set_verbose(verbose)
+        warnings.simplefilter("ignore")
 
     def fit(self, X: List, y: np.ndarray):
         # assumption : X *always* contains samples (i.e. X[0] is the first sample and so on)

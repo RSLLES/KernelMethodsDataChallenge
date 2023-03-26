@@ -41,6 +41,12 @@ class Kernel:
         if verbose:
             print(f"[Init] Using {self.processes} processes.")
 
+    def set_verbose(self, verbose):
+        assert isinstance(verbose, bool)
+        if verbose != self.verbose:
+            print(f"Verbosity set to {verbose}")
+            self.verbose = verbose
+
     def reset_cache(self):
         """Reset the cache dictionary."""
         if self.use_cache:
@@ -79,10 +85,8 @@ class Kernel:
                 "A subclass of `Kernel` should implement either a kernel or a phi and an inner functions."
             )
 
-    def _tqdm(self, gen, *args, **kargs):
-        if self.verbose:
-            return tqdm.tqdm(gen, *args, **kargs)
-        return gen
+    def _tqdm(self, *args, **kargs):
+        return tqdm.tqdm(*args, **kargs, disable=not self.verbose)
 
     def _solo_phi(self, x):
         assert isinstance(x, list)
@@ -118,7 +122,7 @@ class Kernel:
             res = p.map_async(self._multi_inner_solo, zip(R, C))
 
             # Wait
-            with tqdm.tqdm(
+            with self._tqdm(
                 total=n * (n + 1) // 2, desc="[Fit_Phi] Computing Inner products"
             ) as pbar:
                 last_v, v = 0, 0
@@ -203,7 +207,7 @@ class Kernel:
             res = p.map_async(self._multi_inner, zip(R, C))
 
             # Wait
-            with tqdm.tqdm(
+            with self._tqdm(
                 total=n * m, desc="[Transform_Phi] Computing Inner products"
             ) as pbar:
                 last_v, v = 0, 0
@@ -251,7 +255,7 @@ class Kernel:
             res = p.map_async(self._multi_kernel, zip(R, C))
 
             # Wait
-            with tqdm.tqdm(total=n * (n + 1) // 2, desc="[Fit] Kernel") as pbar:
+            with self._tqdm(total=n * (n + 1) // 2, desc="[Fit] Kernel") as pbar:
                 last_v, v = 0, 0
                 while not res.ready():
                     v = self.q.qsize()
