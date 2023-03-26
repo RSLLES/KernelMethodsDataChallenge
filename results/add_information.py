@@ -70,6 +70,7 @@ def main():
     corr_matrix(results_df)
 
     # Creating text
+    results_df["Method"] = results_df["Method"].apply(lambda x: f"[{x}](#{x})")
     text = ["## Ranking"] + results_df.to_markdown(index=False).split("\n")
     text += [
         "## Correlation between methods",
