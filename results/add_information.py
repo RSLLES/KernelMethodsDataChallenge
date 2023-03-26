@@ -56,10 +56,12 @@ def corr_matrix(results_df, path="./results/corr_matrix.png"):
     df_values = pd.DataFrame(values, columns=methods)
     corr = df_values.corr()
 
+    sns.set(font_scale=0.8)
     plot = sns.heatmap(corr, cmap="mako")
     fig = plot.get_figure()
-    # fig.subplots_adjust(top=0.95)
-    fig.savefig(path, bbox_inches="tight")
+    fig.set_size_inches(10, 8)
+    fig.tight_layout()
+    fig.savefig(path, dpi=300)
 
 
 def main():
