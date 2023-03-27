@@ -145,3 +145,27 @@ class WassersteinWeisfeilerLehmanKernel(Kernel):
         D = D.mean(axis=0)
         wasserstein = ot.emd2([], [], D)
         return np.exp(-self.l * wasserstein)
+
+
+def squash_D(D):
+    return 1 - (1 - D).prod(axis=1)
+
+
+def define_D(X1, X2, depth=3):
+    D = np.zeros((depth + 1, X1.shape[1], X2.shape[1]))
+    for batch in range(depth + 1):
+        D[batch] = np.equal.outer(X1[batch], X2[batch])
+    D = squash_D(D.mean(axis=0))
+    return D / sum(D) if sum(D) > 0 else D
+
+
+from .JSWL import JensenShannon
+
+
+class TestWeisfeilerLehmanKernel(WassersteinWeisfeilerLehmanKernel):
+    def inner(self, X1, X2):
+        D1, D2 = define_D(X1, X2, depth=self.depth), define_D(X2, X1, depth=self.depth)
+        d1 = {n: d for n, d in enumerate(D1) if d > 0}
+        d2 = {n: d for n, d in enumerate(D2) if d > 0}
+        js = JensenShannon(d1, d2)
+        return np.exp(-js)
