@@ -40,14 +40,13 @@ class Kernel:
         self.set_processes(processes)
 
     def set_processes(self, processes):
-        assert processes is None or isinstance(processes, int)
-        if not hasattr(self, "processes") or processes != self.processes:
-            self.processes = processes or max(
-                os.cpu_count() - 4, os.cpu_count() // 2, 1
-            )
-            if self.processes == -1:
-                self.processes = os.cpu_count()
-            print(f"Switching to {self.processes} processes.")
+        if processes is None:
+            processes = max(os.cpu_count() - 4, os.cpu_count() // 2, 1)
+        elif processes == -1:
+            processes = os.cpu_count()
+
+        if not hasattr(self, "processes") or self.processes != processes:
+            self.processes = processes
 
     def set_verbose(self, verbose):
         assert isinstance(verbose, bool)
