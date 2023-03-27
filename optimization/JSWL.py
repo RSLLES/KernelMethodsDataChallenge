@@ -1,4 +1,4 @@
-import configs.wwl_edges_depth1 as config
+import configs.wl_depth4 as config
 from preprocessing.load import load_data
 from kernels.JSWL import JensenShannonWeisfeilerLehmanKernel as Kernel
 from run import train_and_score
@@ -23,6 +23,7 @@ def test(depth, log_lambd):
         use_cache=True,
     )
     kernel.set_processes(-1)
+    print(f"Processes : {kernel.processes}")
 
     # Training
     scores = []
@@ -34,7 +35,7 @@ def test(depth, log_lambd):
     scores = [np.array(score) for score in scores]
     average_scores = sum(scores) / len(scores)
     f1, auc = average_scores[-2], average_scores[-1]
-    return auc + 0.01 * f1
+    return auc
 
 
 def main():
