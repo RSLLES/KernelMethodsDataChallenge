@@ -39,7 +39,8 @@ class SVC:
         self.penalty = penalty.lower()
         self.epsilon = epsilon
         self.verbose = verbose
-        self.kernel.set_verbose(verbose)
+        if not isinstance(kernel, str):
+            self.kernel.set_verbose(verbose)
         warnings.simplefilter("ignore")
 
     def fit(self, X: List, y: np.ndarray):
@@ -71,10 +72,10 @@ class SVC:
         :param X: The data points to classify
         :return: a vector containing the decision function value for each data point
         """
-        n_sep = len(self._separating_vecs)
-        n_points = len(X)
+        if self.kernel == "precomputed":
+            kernel_eval = X[:, self.nonzero_alpha_idx].squeeze()
+            return np.sum(self._separating_weights * kernel_eval, axis=1) + self._offset
         kernel_eval = self.kernel(self._separating_vecs, X)
-
         return (
             np.sum(self._separating_weights[:, None] * kernel_eval, axis=0)
             + self._offset
@@ -114,13 +115,17 @@ class SVC:
         y = self._check_labels(y)
 
         # Compute Kernel
-        K = self.kernel(X)
+        K = self.kernel(X) if self.kernel != "precomputed" else X
         SVC._check_kernel(K)
 
         # Dual problem definition
         alpha = cvx.Variable(
             shape=n, name="alpha"
         )  # alpha represents the dual variables
+        if self.verbose:
+            print(
+                "[SVC.fit] Computing the Hessienne and checking if it is semi positive definite..."
+            )
         hess = cvx.Parameter(
             shape=(n, n),
             name="hessian",
@@ -160,29 +165,39 @@ class SVC:
 
         self._alpha = alpha.value
         # now, get vectors needed for separation
-        nonzero_alpha_idx = self._alpha > self.epsilon
-        support_idx = nonzero_alpha_idx & (self._alpha < (self.C - self.epsilon))
-        self._support_vecs = [X[i] for i in range(len(X)) if support_idx[i]]
-        self._separating_weights = self._alpha[nonzero_alpha_idx] * y[nonzero_alpha_idx]
-        self._separating_vecs = [X[i] for i in range(len(X)) if nonzero_alpha_idx[i]]
+        self.nonzero_alpha_idx = self._alpha > self.epsilon
+        self.support_idx = self.nonzero_alpha_idx & (
+            self._alpha < (self.C - self.epsilon)
+        )
+        self._support_vecs = [X[i] for i in range(len(X)) if self.support_idx[i]]
+        self._separating_weights = (
+            self._alpha[self.nonzero_alpha_idx] * y[self.nonzero_alpha_idx]
+        )
+        self._separating_vecs = [
+            X[i] for i in range(len(X)) if self.nonzero_alpha_idx[i]
+        ]
 
         # f is the RKHS function optimal for the primal problem
-        def f(x):
-            _kern_eval = self.kernel(self._separating_vecs, x)
+        def f(x_idx):
+            if self.kernel == "precomputed":
+                _kern_eval = K[self.nonzero_alpha_idx, :][:, x_idx]
+            else:
+                _kern_eval = self.kernel(self._separating_vecs, X[x_idx])
             return np.dot(self._separating_weights, _kern_eval)
 
         if len(self._support_vecs) == 0:
+            print("WARNING : no support vectors")
             # this can happen when all dual coefficients are close to C
             neg_idx = np.argmax(
                 [
-                    f(self._separating_vecs[i])
+                    f(self.nonzero_alpha_idx[i])
                     for i in range(len(self._separating_vecs))
                     if y[i] == -1
                 ]
             )
             pos_idx = np.argmin(
                 [
-                    f(self._separating_vecs[i])
+                    f(self.nonzero_alpha_idx[i])
                     for i in range(len(self._separating_vecs))
                     if y[i] == 1
                 ]
@@ -191,11 +206,12 @@ class SVC:
                 self._separating_vecs[neg_idx],
                 self._separating_vecs[pos_idx],
             ]
-            self._offset = -0.5 * (f(self._support_vecs[0]) + f(self._support_vecs[1]))
+            self._offset = -0.5 * (f(neg_idx) + f(pos_idx))
         else:
             # compute b (hyperplane offset) : for x0 a support vector, y0 (f(x0) + b) = -1
-            f_x0 = f(self._support_vecs[0])
-            self._offset = y[support_idx][0] - f_x0
+            idx = np.where(self.support_idx)[0][0]
+            f_x0 = f(idx)
+            self._offset = y[self.support_idx][0] - f_x0
 
         if self.verbose:
             print(

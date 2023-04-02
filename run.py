@@ -1,4 +1,4 @@
-from sklearn.svm import SVC
+from svc.svc import SVC
 from svc.svc import score as score_metric
 
 # from sklearn.svm import SVC
@@ -41,7 +41,7 @@ def evaluate_perfs(ds, K):
         K_test = K[idx_test][:, idx_train]
         y_test = ds.y[idx_test]
 
-        svc = SVC(kernel="precomputed")
+        svc = SVC(kernel="precomputed", verbose=True)
         svc.fit(X=K_train, y=y_train)
         score = score_metric(svc=svc, X=K_test, y=y_test.astype(bool))
         print_metrics(score)
@@ -79,7 +79,7 @@ def run(config, performance, predict, filename, verbose, processes):
             f.write(summary)
 
     # Test
-    if True:
+    if predict:
         print("### On validation data ###")
         print("Training full SVC...")
         svc = SVC(kernel="precomputed")
