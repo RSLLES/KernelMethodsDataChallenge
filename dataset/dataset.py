@@ -65,6 +65,9 @@ class Dataset:
     def __len__(self):
         return self.k_folds
 
+    def iter_indexes(self):
+        return zip(self.idxs_train, self.idxs_test)
+
     def __getitem__(self, fold_idx):
         if not (0 <= fold_idx and fold_idx < self.__len__()):
             raise IndexError(f"Index {fold_idx} is incorrect.")

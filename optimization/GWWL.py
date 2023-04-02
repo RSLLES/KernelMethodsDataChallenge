@@ -1,7 +1,7 @@
 import configs.wl_depth4 as config
 from preprocessing.load import load_data
 from kernels.GWWL import GeneralizedWassersteinWeisfeilerLehmanKernel as Kernel
-from run import train_and_score
+from run import evaluate_perfs
 import numpy as np
 import pandas as pd
 import os
@@ -26,17 +26,16 @@ def test(lambd, weight):
     kernel.set_processes(-1)
     print(f"Processes : {kernel.processes}")
 
+    # Computing kernel
+    print("Computing kernel")
+    K = kernel(ds.X)
+
     # Training
-    scores = []
-    for fold, (X, y, Xv, yv) in enumerate(ds):
-        print(f"### Fold {fold+1}/{len(ds)} ###")
-        score = train_and_score(kernel, X, y, Xv, yv, verbose=True)
-        scores.append(score)
+    scores = evaluate_perfs(ds=ds, K=K)
 
     scores = [np.array(score) for score in scores]
     average_scores = sum(scores) / len(scores)
-    f1, auc = average_scores[-2], average_scores[-1]
-    return auc
+    return average_scores[-1]
 
 
 def main():

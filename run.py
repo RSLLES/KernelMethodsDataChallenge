@@ -1,4 +1,4 @@
-from svc.svc import SVC
+from sklearn.svm import SVC
 from svc.svc import score as score_metric
 
 # from sklearn.svm import SVC
@@ -18,40 +18,6 @@ def print_metrics(score_output):
     print(s)
 
 
-def train_and_score(kernel, X, y, Xv, yv, verbose):
-    """
-    Trains a classifier on a training set and returns the score on a holdout set.
-    """
-    svc = SVC(kernel=kernel, verbose=verbose)
-    svc.fit(X=X, y=np.array(y))
-    score = score_metric(svc=svc, X=Xv, y=yv.astype(bool))
-    print_metrics(score)
-    return score
-
-
-def test(config, ds, ds_val, kernel, filename):
-    """
-    Tests the performance of the classifier on the validation set.
-    """
-    print("### On validation data ###")
-    print("Training full SVC...")
-    X, y = ds.full()
-    X_val, _ = ds_val.full()
-    svc = SVC(kernel=kernel, verbose=True)
-    svc.fit(X=X, y=np.array(y))
-    print("Predicting values...")
-    y_pred = svc.decision_function(X_val)
-    print("Exporting...")
-    if not os.path.isdir(config.export_directory):
-        os.mkdir(config.export_directory)
-    df = pd.DataFrame(
-        y_pred,
-        columns=["Predicted"],
-        index=pd.RangeIndex(1, len(y_pred) + 1, name="Id"),
-    )
-    df.to_csv(os.path.join(config.export_directory, filename + ".csv"))
-
-
 def get_summary(scores):
     logs = [(f"Fold {fold+1}", *score) for fold, score in enumerate(scores)]
 
@@ -66,6 +32,23 @@ def get_summary(scores):
     return df.to_markdown(index=False)
 
 
+def evaluate_perf(ds, K):
+    scores = []
+    for fold, (idx_train, idx_test) in enumerate(ds.iter_indexes()):
+        print(f"### Fold {fold+1}/{len(ds)} ###")
+        K_train = K[idx_train][:, idx_train]
+        y_train = ds.y[idx_train]
+        K_test = K[idx_test][:, idx_train]
+        y_test = ds.y[idx_test]
+
+        svc = SVC(kernel="precomputed")
+        svc.fit(X=K_train, y=y_train)
+        score = score_metric(svc=svc, X=K_test, y=y_test.astype(bool))
+        print_metrics(score)
+        scores.append(score)
+    return scores
+
+
 def run(config, performance, predict, filename, verbose, processes):
     """
     Runs the entire pipeline for training and testing a classifier.
@@ -78,15 +61,13 @@ def run(config, performance, predict, filename, verbose, processes):
     kernel = config.kernel
     kernel.set_processes(processes)
 
+    # Computing kernel
+    print("Computing kernel")
+    K = kernel(ds.X)
+
     # Training
     if performance:
-        print("Estimating performances ...")
-        scores = []
-        for fold, (X, y, Xv, yv) in enumerate(ds):
-            print(f"### Fold {fold+1}/{len(ds)} ###")
-            score = train_and_score(kernel, X, y, Xv, yv, verbose=verbose)
-            scores.append(score)
-
+        scores = evaluate_perf(ds=ds, K=K)
         # Summary
         print("### Summary ###")
         summary = get_summary(scores)
@@ -98,8 +79,23 @@ def run(config, performance, predict, filename, verbose, processes):
             f.write(summary)
 
     # Test
-    if predict:
-        test(config, ds, ds_val, kernel, filename)
+    if True:
+        print("### On validation data ###")
+        print("Training full SVC...")
+        svc = SVC(kernel="precomputed")
+        svc.fit(X=K, y=np.array(ds.y))
+        print("Predicting values...")
+        K_val = kernel(ds_val.X, ds.X)
+        y_pred = svc.decision_function(K_val)
+        print("Exporting...")
+        if not os.path.isdir(config.export_directory):
+            os.mkdir(config.export_directory)
+        df = pd.DataFrame(
+            y_pred,
+            columns=["Predicted"],
+            index=pd.RangeIndex(1, len(y_pred) + 1, name="Id"),
+        )
+        df.to_csv(os.path.join(config.export_directory, filename + ".csv"))
 
 
 def main(
