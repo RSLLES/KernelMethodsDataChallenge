@@ -67,7 +67,8 @@ def main():
     optimizer.subscribe(Events.OPTIMIZATION_STEP, logger)
     # optimizer.set_gp_params(alpha=1e-3)
     optimizer.probe(params=[3.0, 1.0])
-    optimizer._gp.fit(optimizer.space.params, optimizer.space.target)
+    if len(optimizer.space.target) > 0:
+        optimizer._gp.fit(optimizer.space.params, optimizer.space.target)
     optimizer.maximize(n_iter=40, init_points=15)
 
     df = pd.DataFrame(list(optimizer.res))
