@@ -23,7 +23,11 @@ def main(method_dir: str, show: bool = True, N: int = 1000) -> None:
         )
 
     # Load the logs from the file and create BayesianOptimization object with the optimization parameters
-    opt = BayesianOptimization(f=None, pbounds={"depth": (1, 8), "lambd": (0.5, 10.0)})
+    pbounds = {
+        "depth": (1, 9),
+        "log_lambd": (-1.0, 1.0),
+    }
+    opt = BayesianOptimization(f=None, pbounds=pbounds)
     load_logs(opt, logs=[path])
 
     # Check whether there are only two parameters in the logged data
