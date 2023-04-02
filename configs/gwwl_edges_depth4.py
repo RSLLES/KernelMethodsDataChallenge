@@ -9,7 +9,7 @@ k_folds_cross_val = 6
 from kernels.GWWL import GeneralizedWassersteinWeisfeilerLehmanKernel
 
 kernel = GeneralizedWassersteinWeisfeilerLehmanKernel(
-    depth=4, lambd=1.0, use_cache=True
+    depth=3, lambd=4.0, use_cache=True
 )
 
 ### Save ###

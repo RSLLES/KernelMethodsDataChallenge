@@ -1,8 +1,11 @@
 from typing import List
 from collections import Counter
+import warnings
 from kernels.kernel import Kernel
 import networkx as nx
 import numpy as np
+
+np.seterr(all="raise")
 import ot
 
 Graph = nx.classes.graph.Graph
@@ -13,11 +16,20 @@ Graph = nx.classes.graph.Graph
 #########################
 
 
+def pad(labels, size=1 + 6, blank_label=-1):  # one_label + Max neighbors
+    return labels + (blank_label,) * (size - len(labels))
+
+
 def compute_neighbors_based_label(G: Graph, labels: dict, n: int) -> int:
     label = hash(labels[n])
-    neighbors_labels = tuple(hash(labels[k]) for k in G.neighbors(n))
-    neighbors_edges = tuple(hash(G.edges[n, k]["labels"][0]) for k in G.neighbors(n))
-    return (label, neighbors_labels, neighbors_edges)
+    neighbors = tuple(
+        hash((labels[k], G.edges[k, n]["labels"][0]))
+        if (k, n) in G.edges
+        else hash(labels[k])
+        for k in G.neighbors(n)
+    )
+
+    return pad((label,) + (neighbors))
 
 
 def WL_iterations(G: Graph, labels: dict, depth: int) -> int:
@@ -33,7 +45,9 @@ def WL_iterations(G: Graph, labels: dict, depth: int) -> int:
 
 
 class GeneralizedWassersteinWeisfeilerLehmanKernel(Kernel):
-    def __init__(self, depth: int, lambd: float = 1.0, *args, **kargs) -> None:
+    def __init__(
+        self, depth: int, lambd: float = 1.0, weight: float = 0.5, *args, **kargs
+    ) -> None:
         """
         Implementation of the Wasserstein Weisfeiler-Lehman Graph Kernel.
         See the following paper : https://arxiv.org/pdf/1906.01277.pdf
@@ -47,10 +61,11 @@ class GeneralizedWassersteinWeisfeilerLehmanKernel(Kernel):
         assert (
             isinstance(depth, int) and depth >= 1
         ), "depth should be a non-negative integer"
-
+        assert isinstance(weight, float) and weight <= 1.0 and weight >= 0.0
         self.depth = depth
         self.l = lambd
-        self.w_labels, self.w_neighbors, self.w_edges = 1 / 2, 1 / 4, 1 / 4
+        self.w = weight
+        self.max_labels = 7  # See pad function
         super().__init__(*args, **kargs)
 
     def phi(self, x: Graph, *args, **kargs):
@@ -70,55 +85,57 @@ class GeneralizedWassersteinWeisfeilerLehmanKernel(Kernel):
             substructure observed at `i-th` iteration.
         """
         labels = {n: x.nodes[n]["labels"][0] for n in x.nodes}
-        return WL_iterations(G=x, labels=labels, depth=self.depth)
+        res = WL_iterations(G=x, labels=labels, depth=self.depth)
+
+        batch_labels = []
+        for labels in res:
+            batch_labels.append(np.array([labels[n] for n in x.nodes]))
+        return np.stack(batch_labels)
 
     def inner(self, X1, X2):
         len1, len2 = len(X1[0]), len(X2[0])
-        D = np.zeros((self.depth, len1, len2))
+        shape = (self.depth, len1, len2, self.max_labels)
+        D1 = np.broadcast_to(X1[:, :, None, :], shape)
+        D2 = np.broadcast_to(X2[:, None, :, :], shape)
+        D = not_equal_or_nan(D1, D2)
 
-        for batch in range(self.depth):
-            dic1, dic2 = X1[batch], X2[batch]
-            for i in range(len1):
-                for j in range(len2):
-                    label1, neighbors1, edges1 = dic1[i]
-                    label2, neighbors2, edges2 = dic2[j]
+        D_labels = D[..., 0]
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", category=RuntimeWarning)
+            D_neighbors = np.nanmean(D[..., 1:], axis=-1)
+        D_neighbors = np.nan_to_num(D_neighbors, 0.0)
 
-                    D[batch, i, j] += self.w_labels if label1 != label2 else 0.0
-                    D[batch, i, j] += self.w_neighbors * unshared_elements(
-                        neighbors1, neighbors2
-                    )
-                    D[batch, i, j] += self.w_edges * unshared_elements(edges1, edges2)
-
+        D = self.w * D_labels + (1.0 - self.w) * D_neighbors
         D = D.mean(axis=0)
         wasserstein = ot.emd2([], [], D)
-        # return wasserstein
-        return np.exp(-self.l * wasserstein)
+        return round(np.exp(-self.l * wasserstein), 7)
 
 
-def unshared_elements(T1, T2):
-    L1, L2 = list(T1), list(T2)
-    base = len(L1) + len(L2)
-    if base == 0:
-        return 0.0
-    i = 0
-    while i < len(L1):
-        if L1[i] in L2:
-            L2.remove(L1[i])
-            del L1[i]
-        else:
-            i += 1
-    return (len(L1) + len(L2)) / base
+def not_equal_or_nan(a, b, blank_token=-1):
+    equal_mask = a == b
+    none_mask = (a == blank_token) & (b == blank_token)
+    result = np.where(equal_mask, False, True)
+    result = np.where(none_mask, np.nan, result)
+    return result
 
 
-def main():
-    from preprocessing.load import load_file
+# def main():
+#     import kernels.WWL
+#     from preprocessing.load import load_file
 
-    G1 = load_file("data/training_data.pkl")[0]
-    G2 = load_file("data/training_data.pkl")[1]
-    kernel = GeneralizedWassersteinWeisfeilerLehmanKernel(1)
-    K1, K2 = kernel.phi(G1), kernel.phi(G2)
-    D = kernel.inner(K1, K2)
+#     G1 = load_file("data/training_data.pkl")[0]
+#     G2 = load_file("data/training_data.pkl")[1]
+
+#     KernelG = GeneralizedWassersteinWeisfeilerLehmanKernel
+#     Kernel = kernels.WWL.WassersteinWeisfeilerLehmanKernel
+
+#     kernelg, kernel = KernelG(1, weight=1.0), Kernel(0)
+#     K1g, K2g = kernelg.phi(G1), kernelg.phi(G2)
+#     K1, K2 = kernel.phi(G1), kernel.phi(G2)
+#     i = kernel.inner(K1, K2)
+#     ig = kernelg.inner(K1g, K2g)
+#     print(i, ig)
 
 
-if __name__ == "__main__":
-    main()
+# if __name__ == "__main__":
+#     main()
