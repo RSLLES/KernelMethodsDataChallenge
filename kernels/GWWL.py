@@ -4,8 +4,6 @@ import warnings
 from kernels.kernel import Kernel
 import networkx as nx
 import numpy as np
-
-np.seterr(all="raise")
 import ot
 
 Graph = nx.classes.graph.Graph
