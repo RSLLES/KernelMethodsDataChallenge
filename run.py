@@ -32,7 +32,7 @@ def get_summary(scores):
     return df.to_markdown(index=False)
 
 
-def evaluate_perf(ds, K):
+def evaluate_perfs(ds, K):
     scores = []
     for fold, (idx_train, idx_test) in enumerate(ds.iter_indexes()):
         print(f"### Fold {fold+1}/{len(ds)} ###")
@@ -67,7 +67,7 @@ def run(config, performance, predict, filename, verbose, processes):
 
     # Training
     if performance:
-        scores = evaluate_perf(ds=ds, K=K)
+        scores = evaluate_perfs(ds=ds, K=K)
         # Summary
         print("### Summary ###")
         summary = get_summary(scores)
