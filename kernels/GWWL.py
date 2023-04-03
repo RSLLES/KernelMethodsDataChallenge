@@ -91,22 +91,32 @@ class GeneralizedWassersteinWeisfeilerLehmanKernel(Kernel):
         return np.stack(batch_labels)
 
     def inner(self, X1, X2):
-        len1, len2 = len(X1[0]), len(X2[0])
+        ## Labels
+        len1, len2 = X1.shape[1], X2.shape[1]
         shape = (self.depth, len1, len2, self.max_labels)
         D1 = np.broadcast_to(X1[:, :, None, :], shape)
         D2 = np.broadcast_to(X2[:, None, :, :], shape)
-        D = not_equal_or_nan(D1, D2)
+        D_labels = not_equal_or_nan(D1[..., 0], D2[..., 0])
 
-        D_labels = D[..., 0]
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore", category=RuntimeWarning)
-            D_neighbors = np.nanmean(D[..., 1:], axis=-1)
-        D_neighbors = np.nan_to_num(D_neighbors, 0.0)
+        ## neighbors
+        D = np.concatenate([D1, D2], axis=-1)
+        a = self.max_labels
 
-        D = self.w * D_labels + (1.0 - self.w) * D_neighbors
+        D_neighbors = np.apply_along_axis(count_common, axis=-1, arr=D)
+
+        # Merge
+        D = D_labels * (1.0 + self.w * D_neighbors) / (1 + self.w)
         D = D.mean(axis=0)
         wasserstein = ot.emd2([], [], D)
         return round(np.exp(-self.l * wasserstein), 7)
+
+
+def count_common(arr, blank=-1, a=7):  # max_size
+    arr1, arr2 = arr[:a], arr[a:]
+    arr1, arr2 = arr1[arr1 != blank], arr2[arr2 != blank]
+    a1 = sum(np.isin(arr1, arr2, invert=True)) / len(arr1) if len(arr1) > 0 else 0.0
+    a2 = sum(np.isin(arr2, arr1, invert=True)) / len(arr2) if len(arr2) > 0 else 0.0
+    return 0.5 * (a1 + a2)
 
 
 def not_equal_or_nan(a, b, blank_token=-1):
@@ -117,23 +127,23 @@ def not_equal_or_nan(a, b, blank_token=-1):
     return result
 
 
-# def main():
-#     import kernels.WWL
-#     from preprocessing.load import load_file
+def main():
+    import kernels.WWL
+    from preprocessing.load import load_file
 
-#     G1 = load_file("data/training_data.pkl")[0]
-#     G2 = load_file("data/training_data.pkl")[1]
+    G1 = load_file("data/training_data.pkl")[0]
+    G2 = load_file("data/training_data.pkl")[1]
 
-#     KernelG = GeneralizedWassersteinWeisfeilerLehmanKernel
-#     Kernel = kernels.WWL.WassersteinWeisfeilerLehmanKernel
+    KernelG = GeneralizedWassersteinWeisfeilerLehmanKernel
+    Kernel = kernels.WWL.WassersteinWeisfeilerLehmanKernel
 
-#     kernelg, kernel = KernelG(1, weight=1.0), Kernel(0)
-#     K1g, K2g = kernelg.phi(G1), kernelg.phi(G2)
-#     K1, K2 = kernel.phi(G1), kernel.phi(G2)
-#     i = kernel.inner(K1, K2)
-#     ig = kernelg.inner(K1g, K2g)
-#     print(i, ig)
+    kernelg, kernel = KernelG(1, weight=1.0), Kernel(0)
+    K1g, K2g = kernelg.phi(G1), kernelg.phi(G2)
+    K1, K2 = kernel.phi(G1), kernel.phi(G2)
+    i = kernel.inner(K1, K2)
+    ig = kernelg.inner(K1g, K2g)
+    print(i, ig)
 
 
-# if __name__ == "__main__":
-#     main()
+if __name__ == "__main__":
+    main()

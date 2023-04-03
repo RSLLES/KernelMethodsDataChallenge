@@ -12,8 +12,7 @@ from bayes_opt.event import Events
 from bayes_opt.util import load_logs
 
 
-def test(lambd, weight):
-    depth = 4
+def test(depth, lambd, weight):
     print(f"Params for this run : depth={depth}, lambd={lambd}, weight={weight}")
     ds, _ = load_data(config=config)
 
@@ -31,7 +30,7 @@ def test(lambd, weight):
     K = kernel(ds.X)
 
     # Training
-    scores = evaluate_perfs(ds=ds, K=K)
+    scores = evaluate_perfs(ds=ds, K=K, processes=kernel.processes)
 
     scores = [np.array(score) for score in scores]
     average_scores = sum(scores) / len(scores)
@@ -47,7 +46,8 @@ def main():
     results_path = os.path.join(path, "results.csv")
 
     pbounds = {
-        "lambd": (0.1, 10.0),
+        "depth": (3, 9),
+        "lambd": (0.5, 5.0),
         "weight": (0.0, 1.0),
     }
 
@@ -65,10 +65,10 @@ def main():
     logger = JSONLogger(path=json_path, reset=False)
     optimizer.subscribe(Events.OPTIMIZATION_STEP, logger)
     # optimizer.set_gp_params(alpha=1e-3)
-    optimizer.probe(params=[3.0, 1.0])
+    optimizer.probe(params=[4, 3.0, 1.0])
     if len(optimizer.space.target) > 0:
         optimizer._gp.fit(optimizer.space.params, optimizer.space.target)
-    optimizer.maximize(n_iter=40, init_points=15)
+    optimizer.maximize(n_iter=60, init_points=15)
 
     df = pd.DataFrame(list(optimizer.res))
     df.index.name = "Iteration"
