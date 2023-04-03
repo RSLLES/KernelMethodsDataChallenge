@@ -9,12 +9,13 @@ import importlib.util
 import sys
 import os
 import pandas as pd
+import multiprocessing
 
 
-def print_metrics(score_output):
+def print_metrics(fold, score_output):
     """Prints metrics produced by SVC.score function"""
     acc, prec, rec, f1, rocauc = score_output
-    s = f"Accuracy = {acc*100:.1f}%, Precision = {prec*100:.1f}%, Recall = {rec*100:.1f}%, F1 = {f1*100:.1f}%, ROCAUC = {rocauc*100:.1f}%"
+    s = f"Fold {fold} -> Accuracy = {acc*100:.1f}%, Precision = {prec*100:.1f}%, Recall = {rec*100:.1f}%, F1 = {f1*100:.1f}%, ROCAUC = {rocauc*100:.1f}%"
     print(s)
 
 
@@ -32,20 +33,32 @@ def get_summary(scores):
     return df.to_markdown(index=False)
 
 
-def evaluate_perfs(ds, K):
-    scores = []
-    for fold, (idx_train, idx_test) in enumerate(ds.iter_indexes()):
-        print(f"### Fold {fold+1}/{len(ds)} ###")
+def perf(h):
+    try:
+        fold, idx, K, y = h
+        idx_train, idx_test = idx
         K_train = K[idx_train][:, idx_train]
-        y_train = ds.y[idx_train]
+        y_train = y[idx_train]
         K_test = K[idx_test][:, idx_train]
-        y_test = ds.y[idx_test]
+        y_test = y[idx_test]
 
+        print(f"[{fold}] Solving ...")
         svc = SVC(kernel="precomputed", verbose=True)
         svc.fit(X=K_train, y=y_train)
         score = score_metric(svc=svc, X=K_test, y=y_test.astype(bool))
-        print_metrics(score)
-        scores.append(score)
+        print_metrics(fold, score)
+        return score
+    except KeyboardInterrupt:
+        print("Caught KeyboardInterrupt, terminating workers")
+        return None
+
+
+def evaluate_perfs(ds, K, processes):
+    k = ds.k_folds
+    with multiprocessing.Pool(processes=processes) as p:
+        print(f"Starting {k} SVC solvers on {processes} processes...")
+        res = p.map_async(perf, zip(range(k), ds.iter_indexes(), [K] * k, [ds.y] * k))
+        scores = list(res.get())
     return scores
 
 
@@ -67,7 +80,7 @@ def run(config, performance, predict, filename, verbose, processes):
 
     # Training
     if performance:
-        scores = evaluate_perfs(ds=ds, K=K)
+        scores = evaluate_perfs(ds=ds, K=K, processes=kernel.processes)
         # Summary
         print("### Summary ###")
         summary = get_summary(scores)
