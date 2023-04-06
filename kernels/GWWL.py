@@ -82,7 +82,12 @@ class GeneralizedWassersteinWeisfeilerLehmanKernel(Kernel):
         labels = {n: x.nodes[n]["labels"][0] for n in x.nodes}
         res = WL_iterations(G=x, labels=labels, depth=self.depth)
         labels = np.array([[label for label, neighbors in batch] for batch in res])
-        neighbors = [[neighbors for label, neighbors in batch] for batch in res]
+        neighbors = np.array(
+            [
+                [counters_to_vector(neighbors) for label, neighbors in batch]
+                for batch in res
+            ]
+        )
         return labels, neighbors
 
     def inner(self, X1, X2):
@@ -96,36 +101,32 @@ class GeneralizedWassersteinWeisfeilerLehmanKernel(Kernel):
         N1, N2 = X1[1], X2[1]
         D_neighbors = np.zeros((self.depth, L1.shape[1], L2.shape[1]))
         for batch in range(self.depth):
-            for i in range(len(N1[batch])):
-                for j in range(len(N2[batch])):
-                    c1, c2 = N1[batch][i], N2[batch][j]
-                    div = min(c1.total(), c2.total())
-                    D_neighbors[batch, i, j] = (
-                        1.0 - (c1 & c2).total() / div if div > 0 else 0.0
-                    )
+            n1 = np.broadcast_to(
+                N1[batch, :, None, :, None, :], (L1.shape[1], L2.shape[1], 7, 7, 2)
+            ).reshape(L1.shape[1], L2.shape[1], 7 * 7, 2)
+            n2 = np.broadcast_to(
+                N2[batch, None, :, None, :, :], (L1.shape[1], L2.shape[1], 7, 7, 2)
+            ).reshape(L1.shape[1], L2.shape[1], 7 * 7, 2)
+            n_union = np.zeros(n1.shape[:3])
+            idx = np.nonzero(n1[..., 0] == n2[..., 0])
+            n_union[idx] = np.minimum(n1[idx][:, 1], n2[idx][:, 1])
+            n_union = np.sum(n_union, axis=-1)
+            div = (
+                np.maximum(np.sum(n1[..., 1], axis=-1), np.sum(n2[..., 1], axis=-1))
+                / 7.0
+            )
+            D_neighbors[batch] = 1.0 - n_union / div
 
         # Merge
         D = D_labels * (1.0 + self.w * D_neighbors) / (1 + self.w)
-        # D = D_labels
         D = D.mean(axis=0)
         wasserstein = ot.emd2([], [], D)
         return round(np.exp(-self.l * wasserstein), 7)
 
 
-def count_common(arr, blank=-1, a=7):  # max_size
-    arr1, arr2 = arr[:a], arr[a:]
-    arr1, arr2 = arr1[arr1 != blank], arr2[arr2 != blank]
-    a1 = sum(np.isin(arr1, arr2, invert=True)) / len(arr1) if len(arr1) > 0 else 0.0
-    a2 = sum(np.isin(arr2, arr1, invert=True)) / len(arr2) if len(arr2) > 0 else 0.0
-    return 0.5 * (a1 + a2)
-
-
-def not_equal_or_nan(a, b, blank_token=-1):
-    equal_mask = a == b
-    none_mask = (a == blank_token) & (b == blank_token)
-    result = np.where(equal_mask, False, True)
-    result = np.where(none_mask, np.nan, result)
-    return result
+def counters_to_vector(counter, size=7):
+    x = tuple((node, freq) for node, freq in counter.items())
+    return x + ((np.NaN, 0),) * (size - len(x))
 
 
 def main():
