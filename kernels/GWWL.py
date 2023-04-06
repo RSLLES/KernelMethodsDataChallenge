@@ -14,10 +14,6 @@ Graph = nx.classes.graph.Graph
 #########################
 
 
-def pad(labels, size=1 + 6, blank_label=-1):  # one_label + Max neighbors
-    return labels + (blank_label,) * (size - len(labels))
-
-
 def compute_neighbors_based_label(G: Graph, labels: dict, n: int) -> int:
     label = hash(labels[n])
     neighbors = tuple(
@@ -27,7 +23,7 @@ def compute_neighbors_based_label(G: Graph, labels: dict, n: int) -> int:
         for k in G.neighbors(n)
     )
 
-    return pad((label,) + (neighbors))
+    return label, neighbors
 
 
 def WL_iterations(G: Graph, labels: dict, depth: int) -> int:
@@ -37,9 +33,10 @@ def WL_iterations(G: Graph, labels: dict, depth: int) -> int:
         n: compute_neighbors_based_label(G=G, labels=labels, n=n) for n in G.nodes()
     }
 
+    R = [(new_labels[n][0], Counter(new_labels[n][1])) for n in G.nodes()]
     if depth == 1:
-        return [new_labels]
-    return [new_labels] + WL_iterations(G=G, labels=new_labels, depth=depth - 1)
+        return [R]
+    return [R] + WL_iterations(G=G, labels=new_labels, depth=depth - 1)
 
 
 class GeneralizedWassersteinWeisfeilerLehmanKernel(Kernel):
@@ -84,28 +81,32 @@ class GeneralizedWassersteinWeisfeilerLehmanKernel(Kernel):
         """
         labels = {n: x.nodes[n]["labels"][0] for n in x.nodes}
         res = WL_iterations(G=x, labels=labels, depth=self.depth)
-
-        batch_labels = []
-        for labels in res:
-            batch_labels.append(np.array([labels[n] for n in x.nodes]))
-        return np.stack(batch_labels)
+        labels = np.array([[label for label, neighbors in batch] for batch in res])
+        neighbors = [[neighbors for label, neighbors in batch] for batch in res]
+        return labels, neighbors
 
     def inner(self, X1, X2):
         ## Labels
-        len1, len2 = X1.shape[1], X2.shape[1]
-        shape = (self.depth, len1, len2, self.max_labels)
-        D1 = np.broadcast_to(X1[:, :, None, :], shape)
-        D2 = np.broadcast_to(X2[:, None, :, :], shape)
-        D_labels = not_equal_or_nan(D1[..., 0], D2[..., 0])
+        L1, L2 = X1[0], X2[0]
+        D_labels = np.zeros((self.depth, L1.shape[1], L2.shape[1]))
+        for batch in range(self.depth):
+            D_labels[batch] = np.not_equal.outer(L1[batch], L2[batch])
 
         ## neighbors
-        D = np.concatenate([D1, D2], axis=-1)
-        a = self.max_labels
-
-        D_neighbors = np.apply_along_axis(count_common, axis=-1, arr=D)
+        N1, N2 = X1[1], X2[1]
+        D_neighbors = np.zeros((self.depth, L1.shape[1], L2.shape[1]))
+        for batch in range(self.depth):
+            for i in range(len(N1[batch])):
+                for j in range(len(N2[batch])):
+                    c1, c2 = N1[batch][i], N2[batch][j]
+                    div = min(c1.total(), c2.total())
+                    D_neighbors[batch, i, j] = (
+                        1.0 - (c1 & c2).total() / div if div > 0 else 0.0
+                    )
 
         # Merge
         D = D_labels * (1.0 + self.w * D_neighbors) / (1 + self.w)
+        # D = D_labels
         D = D.mean(axis=0)
         wasserstein = ot.emd2([], [], D)
         return round(np.exp(-self.l * wasserstein), 7)
@@ -128,6 +129,7 @@ def not_equal_or_nan(a, b, blank_token=-1):
 
 
 def main():
+    import timeit
     import kernels.WWL
     from preprocessing.load import load_file
 
@@ -137,12 +139,20 @@ def main():
     KernelG = GeneralizedWassersteinWeisfeilerLehmanKernel
     Kernel = kernels.WWL.WassersteinWeisfeilerLehmanKernel
 
-    kernelg, kernel = KernelG(1, weight=1.0), Kernel(0)
+    kernelg, kernel = KernelG(8, weight=1.0), Kernel(7)
     K1g, K2g = kernelg.phi(G1), kernelg.phi(G2)
     K1, K2 = kernel.phi(G1), kernel.phi(G2)
     i = kernel.inner(K1, K2)
     ig = kernelg.inner(K1g, K2g)
     print(i, ig)
+
+    timer = timeit.Timer(lambda: kernelg.inner(K1g, K2g))
+    print(f"Time for gwwl : {timer.timeit(1000)}")
+
+    timer = timeit.Timer(lambda: kernel.inner(K1, K2))
+    print(f"Time for wwl : {timer.timeit(1000)}")
+
+    pass
 
 
 if __name__ == "__main__":
