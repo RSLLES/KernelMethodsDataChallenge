@@ -116,7 +116,7 @@ class GeneralizedWassersteinWeisfeilerLehmanKernel(Kernel):
                 / 7.0
             )
             D_neighbors[batch] = np.where(
-                div > 0.0, 1.0 - n_union / div, D_neighbors[batch]
+                div >= 1.0, 1.0 - n_union / div, D_neighbors[batch]
             )
 
         # Merge
