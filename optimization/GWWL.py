@@ -64,7 +64,7 @@ def main():
 
     logger = JSONLogger(path=json_path, reset=False)
     optimizer.subscribe(Events.OPTIMIZATION_STEP, logger)
-    # optimizer.set_gp_params(alpha=1e-3)
+    optimizer.set_gp_params(alpha=1e-3)
     optimizer.probe(params=[4, 3.0, 1.0])
     if len(optimizer.space.target) > 0:
         optimizer._gp.fit(optimizer.space.params, optimizer.space.target)
