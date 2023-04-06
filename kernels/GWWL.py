@@ -115,7 +115,9 @@ class GeneralizedWassersteinWeisfeilerLehmanKernel(Kernel):
                 np.maximum(np.sum(n1[..., 1], axis=-1), np.sum(n2[..., 1], axis=-1))
                 / 7.0
             )
-            D_neighbors[batch] = 1.0 - n_union / div
+            D_neighbors[batch] = np.where(
+                div > 0.0, 1.0 - n_union / div, D_neighbors[batch]
+            )
 
         # Merge
         D = D_labels * (1.0 + self.w * D_neighbors) / (1 + self.w)
