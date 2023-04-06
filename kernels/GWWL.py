@@ -115,7 +115,7 @@ class GeneralizedWassersteinWeisfeilerLehmanKernel(Kernel):
                 np.maximum(np.sum(n1[..., 1], axis=-1), np.sum(n2[..., 1], axis=-1))
                 / 7.0
             )
-            assert not np.sum(div).isnan()
+            assert not np.isnan(np.sum(div))
             D_neighbors[batch] = np.where(
                 div >= 1.0, 1.0 - n_union / div, D_neighbors[batch]
             )
