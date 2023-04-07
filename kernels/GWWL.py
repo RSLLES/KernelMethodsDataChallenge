@@ -118,10 +118,15 @@ class GeneralizedWassersteinWeisfeilerLehmanKernel(Kernel):
             div = np.maximum(t1, t2)
             mask = np.nonzero(div >= 0.5)
             D_neighbors[batch][mask] = 1.0 - n_union[mask] / div[mask]
+            D_neighbors[batch] = D_neighbors[batch] * (1.0 - D_labels[batch])
 
         # Merge
-        D = D_labels * (1.0 + self.w * D_neighbors) / (1 + self.w)
-        D = D.mean(axis=0)
+        D_labels = D_labels.mean(axis=0)
+        D_neighbors = D_neighbors.mean(axis=0)
+        # So two uncorrelated nodes still have something in common
+        # D_neighbors = D_neighbors * (1.0 - D_labels)
+        D = D_labels + self.w * D_neighbors
+        D = D / (1 + self.w)
         wasserstein = ot.emd2([], [], D)
         return round(np.exp(-self.l * wasserstein), 7)
 
