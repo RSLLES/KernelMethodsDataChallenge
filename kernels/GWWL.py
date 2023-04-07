@@ -99,7 +99,7 @@ class GeneralizedWassersteinWeisfeilerLehmanKernel(Kernel):
 
         ## neighbors
         N1, N2 = X1[1], X2[1]
-        D_neighbors = np.zeros((self.depth, L1.shape[1], L2.shape[1]))
+        D_neighbors = np.ones((self.depth, L1.shape[1], L2.shape[1]))
         for batch in range(self.depth):
             n1 = np.broadcast_to(
                 N1[batch, :, None, :, None, :], (L1.shape[1], L2.shape[1], 7, 7, 2)
@@ -111,11 +111,12 @@ class GeneralizedWassersteinWeisfeilerLehmanKernel(Kernel):
             idx = np.nonzero(n1[..., 0] == n2[..., 0])
             n_union[idx] = np.minimum(n1[idx][:, 1], n2[idx][:, 1])
             n_union = np.sum(n_union, axis=-1)
-            div = (
-                np.maximum(np.sum(n1[..., 1], axis=-1), np.sum(n2[..., 1], axis=-1))
-                / 7.0
-            )
-            mask = np.nonzero(div >= 1.0)
+            t1 = np.sum(N1[batch, ..., 1], axis=-1)
+            t2 = np.sum(N2[batch, ..., 1], axis=-1)
+            t1 = np.broadcast_to(t1[:, None], (L1.shape[1], L2.shape[1]))
+            t2 = np.broadcast_to(t2[None, :], (L1.shape[1], L2.shape[1]))
+            div = np.maximum(t1, t2)
+            mask = np.nonzero(div >= 0.5)
             D_neighbors[batch][mask] = 1.0 - n_union[mask] / div[mask]
 
         # Merge
