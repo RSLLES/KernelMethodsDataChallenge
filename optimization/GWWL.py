@@ -22,7 +22,7 @@ def test(depth, lambd, weight):
         weight=weight,
         use_cache=True,
     )
-    kernel.set_processes(-1)
+    kernel.set_processes(None)
     print(f"Processes : {kernel.processes}")
 
     # Computing kernel
@@ -65,7 +65,7 @@ def main():
     logger = JSONLogger(path=json_path, reset=False)
     optimizer.subscribe(Events.OPTIMIZATION_STEP, logger)
     optimizer.set_gp_params(alpha=1e-3)
-    optimizer.probe(params=[4, 3.0, 1.0])
+    optimizer.probe(params=[4, 3.0, 0.0])
     if len(optimizer.space.target) > 0:
         optimizer._gp.fit(optimizer.space.params, optimizer.space.target)
     optimizer.maximize(n_iter=60, init_points=15)

@@ -93,42 +93,41 @@ class GeneralizedWassersteinWeisfeilerLehmanKernel(Kernel):
     def inner(self, X1, X2):
         ## Labels
         L1, L2 = X1[0], X2[0]
-        D_labels = np.zeros((self.depth, L1.shape[1], L2.shape[1]))
-        for batch in range(self.depth):
-            D_labels[batch] = np.not_equal.outer(L1[batch], L2[batch])
+        D_labels = np.equal(L1[:, :, None], L2[:, None, :]).astype(float)
 
         ## neighbors
         N1, N2 = X1[1], X2[1]
-        D_neighbors = np.ones((self.depth, L1.shape[1], L2.shape[1]))
+        D_neighbors = np.zeros_like(D_labels)
+        long_shape = (L1.shape[1], L2.shape[1], 7, 7, 2)
+        short_shape = (L1.shape[1], L2.shape[1], 7 * 7, 2)
         for batch in range(self.depth):
-            n1 = np.broadcast_to(
-                N1[batch, :, None, :, None, :], (L1.shape[1], L2.shape[1], 7, 7, 2)
-            ).reshape(L1.shape[1], L2.shape[1], 7 * 7, 2)
-            n2 = np.broadcast_to(
-                N2[batch, None, :, None, :, :], (L1.shape[1], L2.shape[1], 7, 7, 2)
-            ).reshape(L1.shape[1], L2.shape[1], 7 * 7, 2)
-            n_union = np.zeros(n1.shape[:3])
+            n1 = np.broadcast_to(N1[batch, :, None, :, None, :], long_shape).reshape(
+                short_shape
+            )
+            n2 = np.broadcast_to(N2[batch, None, :, None, :, :], long_shape).reshape(
+                short_shape
+            )
             idx = np.nonzero(n1[..., 0] == n2[..., 0])
-            n_union[idx] = np.minimum(n1[idx][:, 1], n2[idx][:, 1])
-            n_union = np.sum(n_union, axis=-1)
-            t1 = np.sum(N1[batch, ..., 1], axis=-1)
-            t2 = np.sum(N2[batch, ..., 1], axis=-1)
-            t1 = np.broadcast_to(t1[:, None], (L1.shape[1], L2.shape[1]))
-            t2 = np.broadcast_to(t2[None, :], (L1.shape[1], L2.shape[1]))
-            div = np.maximum(t1, t2)
-            mask = np.nonzero(div >= 0.5)
-            D_neighbors[batch][mask] = 1.0 - n_union[mask] / div[mask]
-            D_neighbors[batch] = D_neighbors[batch] * (1.0 - D_labels[batch])
+            reunion = np.zeros(short_shape[:3])
+            reunion[idx] = np.minimum(n1[idx][:, 1], n2[idx][:, 1])
+            reunion = reunion.sum(axis=-1)
+
+            t1 = N1[batch, ..., 1].sum(axis=-1)
+            t2 = N2[batch, ..., 1].sum(axis=-1)
+            union = np.maximum(t1[:, None], t2[None, :])
+
+            with np.errstate(divide="ignore", invalid="ignore"):
+                D_neighbors[batch] = np.nan_to_num(reunion / union, nan=1.0)
 
         # Merge
+        D_neighbors = D_neighbors * D_labels
         D_labels = D_labels.mean(axis=0)
         D_neighbors = D_neighbors.mean(axis=0)
-        # So two uncorrelated nodes still have something in common
-        # D_neighbors = D_neighbors * (1.0 - D_labels)
         D = D_labels + self.w * D_neighbors
         D = D / (1 + self.w)
+        D = 1.0 - D
         wasserstein = ot.emd2([], [], D)
-        return round(np.exp(-self.l * wasserstein), 7)
+        return np.exp(-self.l * wasserstein)
 
 
 def counters_to_vector(counter, size=7):
