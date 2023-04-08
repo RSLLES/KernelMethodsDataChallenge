@@ -173,9 +173,10 @@ class SVC:
         self._separating_weights = (
             self._alpha[self.nonzero_alpha_idx] * y[self.nonzero_alpha_idx]
         )
-        self._separating_vecs = [
-            X[i] for i in range(len(X)) if self.nonzero_alpha_idx[i]
+        self._separating_vecs_idx = [
+            i for i in range(len(X)) if self.nonzero_alpha_idx[i]
         ]
+        self._separating_vecs = [X[i] for i in self._separating_vecs_idx]
 
         # f is the RKHS function optimal for the primal problem
         def f(x_idx):
@@ -190,14 +191,14 @@ class SVC:
             # this can happen when all dual coefficients are close to C
             neg_idx = np.argmax(
                 [
-                    f(self.nonzero_alpha_idx[i])
+                    f(self._separating_vecs_idx[i])
                     for i in range(len(self._separating_vecs))
                     if y[i] == -1
                 ]
             )
             pos_idx = np.argmin(
                 [
-                    f(self.nonzero_alpha_idx[i])
+                    f(self._separating_vecs_idx[i])
                     for i in range(len(self._separating_vecs))
                     if y[i] == 1
                 ]
@@ -206,7 +207,10 @@ class SVC:
                 self._separating_vecs[neg_idx],
                 self._separating_vecs[pos_idx],
             ]
-            self._offset = -0.5 * (f(neg_idx) + f(pos_idx))
+            self._offset = -0.5 * (
+                f(self._separating_vecs_idx[neg_idx])
+                + f(self._separating_vecs_idx[pos_idx])
+            )
         else:
             # compute b (hyperplane offset) : for x0 a support vector, y0 (f(x0) + b) = -1
             idx = np.where(self.support_idx)[0][0]

@@ -16,6 +16,48 @@ class SVCTest(unittest.TestCase):
             [PolynomialKernel(scale=1.0, offset=0.1, degree=2), gen_data(300)],
         ]
 
+    def test_precomputed(self):
+        for kernel, (X, y) in self.tests:
+            print(f"Test with {kernel.__class__.__name__}")
+            ds = Dataset(X=X, y=y, k_folds=3, shuffle=True)
+            for k, (X_train, y_train, X_test, y_test) in enumerate(ds):
+                # Without precomputing
+                model = SVC(kernel=kernel, epsilon=1e-4)
+                model.fit(X=X_train, y=y_train)
+                self.assertEqual(model._opt_status, "optimal")
+
+                y_pred_normal = model.predict(X_test)
+                accuracy, precision, recall, f1, roc = score(
+                    svc=model, X=X_test, y=np.array(y_test).astype(bool)
+                )
+                print(
+                    f"[Normal] Fold {k+1}/3 : Accuracy = {100*accuracy:0.2f}%, "
+                    f"Precision = {100*precision:0.2f}%, Recall = {100*recall:0.2f}%, "
+                    f"f1 = {100 * f1:0.2f}%"
+                )
+
+                # With precomputing
+                model = SVC(kernel="precomputed", epsilon=1e-4)
+                K_train = kernel(X_train)
+                model.fit(X=K_train, y=y_train)
+                self.assertEqual(model._opt_status, "optimal")
+
+                K_test = kernel(X_test, X_train)
+                y_pred_precomputed = model.predict(K_test)
+                accuracy, precision, recall, f1, roc = score(
+                    svc=model, X=K_test, y=np.array(y_test).astype(bool)
+                )
+                print(
+                    f"[Precomputed] Fold {k+1}/3 : Accuracy = {100*accuracy:0.2f}%, "
+                    f"Precision = {100*precision:0.2f}%, Recall = {100*recall:0.2f}%, "
+                    f"f1 = {100 * f1:0.2f}%"
+                )
+
+                np.testing.assert_equal(
+                    np.array(y_pred_normal).astype(bool),
+                    np.array(y_pred_precomputed).astype(bool),
+                )
+
     def test_vs_sklearn(self):
         for kernel, (X, y) in self.tests:
             print(f"Test with {kernel.__class__.__name__}")
