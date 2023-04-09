@@ -1,4 +1,5 @@
 from setuptools import setup, Extension
+import numpy as np
 
 setup(
     name="treeEditDistance",
@@ -8,4 +9,5 @@ setup(
             "treeEditDistance", ["treeEditDistance.cpp", "lib/hungarian/hungarian.cpp"]
         )
     ],
+    include_dirs=[np.get_include()],
 )
