@@ -1,7 +1,10 @@
 #include <iostream>
-#include "Hungarian.h"
-#include "tree.hpp"
-#include "ted.h"
+#include "tree/tree.hh"
+#include "tree/tree_util.hh"
+#include "ted.hpp"
+#include "tee_helper.hpp"
+
+using namespace std;
 
 void display_matrix(const vector<vector<double>> &matrix)
 {
@@ -17,33 +20,37 @@ void display_matrix(const vector<vector<double>> &matrix)
 
 int main(void)
 {
-    Tree<int> t1;
-    int root1 = t1.insert(0, 1);
-    int branch1 = t1.insert(root1, 2);
-    t1.insert(branch1, 1);
-    t1.insert(branch1, 3);
-    int branch2 = t1.insert(root1, 3);
-    t1.insert(branch2, 1);
+    // vector<vector<double>> costMatrix = {{0, 1, 1}, {1, 1, 1}, {1, 0, 1}};
+    // display_matrix(costMatrix);
+    // HungarianAlgorithm HungAlgo;
+    // vector<int> assignment;
+    // double cost = HungAlgo.Solve(costMatrix, assignment);
+    // cout << cost << endl;
 
-    Tree<int> t2;
-    int root2 = t2.insert(0, 1);
-    int branch3 = t2.insert(root2, 1);
-    t2.insert(branch3, 1);
-    t2.insert(branch3, 2);
-    t2.insert(branch3, 3);
+    // tree<int> t1;
+    // auto root = t1.set_head(1);
+    // auto i2 = t1.append_child(root, 2);
+    // auto i3 = t1.append_child(root, 3);
+    // t1.append_child(i2, 1);
+    // t1.append_child(i2, 3);
+    // t1.append_child(i3, 1);
 
-    std::cout << "Tree 1 " << std::endl
-              << t1 << std::endl
-              << "Tree 2 " << std::endl
-              << t2 << std::endl;
+    tree<int> t1 = build_tree<int>("1(2(1,3),3(1))");
+    tree<int> t2 = build_tree<int>("1(1(1,2,3))");
 
-    double cost = ted(t1, root1, t2, root2);
-    std::cout << "Cost : " << cost << std::endl;
+    // tree<int> t2;
+    // auto root2 = t2.set_head(1);
+    // auto i4 = t2.append_child(root2, 1);
+    // t2.append_child(i4, 1);
+    // t2.append_child(i4, 2);
+    // t2.append_child(i4, 3);
 
-    std::cout << "Tree 1 " << std::endl
-              << t1 << std::endl
-              << "Tree 2 " << std::endl
-              << t2 << std::endl;
+    kptree::print_tree_bracketed<int>(t1);
+    std::cout << std::endl;
+    kptree::print_tree_bracketed<int>(t2);
+    std::cout << std::endl;
 
+    // HungarianAlgorithm HungAlgo;
+    std::cout << TreeEditDistance(t1, t2) << std::endl;
     return 0;
 }
