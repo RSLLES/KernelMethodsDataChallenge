@@ -3,7 +3,7 @@
 
 #include <iostream>
 #include "lib/tree/tree.hh"
-#include "hungarian/hungarian.h"
+#include "lib/hungarian/hungarian.h"
 
 #define COST_RENAME 1
 #define COST_MOVE 1
