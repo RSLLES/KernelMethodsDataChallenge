@@ -42,10 +42,10 @@ def main(urls_folder, archive_folder, root_folder, nb_processes):
 
 
 if __name__ == "__main__":
-    # fire.Fire(main)
-    main(
-        urls_folder="D:/Documents_D/Mines/Cours/Master/Kernel/urls/",
-        archive_folder="D:/Documents_D/Mines/Cours/Master/Kernel/archives/",
-        root_folder="D:/Documents_D/Mines/Cours/Master/Kernel/retrieve/",
-        nb_processes=1,
-    )
+    fire.Fire(main)
+    # main(
+    #     urls_folder="D:/Documents_D/Mines/Cours/Master/Kernel/urls/",
+    #     archive_folder="D:/Documents_D/Mines/Cours/Master/Kernel/archives/",
+    #     root_folder="D:/Documents_D/Mines/Cours/Master/Kernel/retrieve/",
+    #     nb_processes=1,
+    # )

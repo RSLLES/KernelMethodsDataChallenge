@@ -51,10 +51,10 @@ def main(root_folder, archive_folder, urls_folder, nb_processes):
 
 
 if __name__ == "__main__":
-    # fire.Fire(main)
-    main(
-        root_folder="D:/Documents_D/Mines/Cours/Master/Kernel/cost_matrices/",
-        archive_folder="D:/Documents_D/Mines/Cours/Master/Kernel/archives/",
-        urls_folder="D:/Documents_D/Mines/Cours/Master/Kernel/urls/",
-        nb_processes=1,
-    )
+    fire.Fire(main)
+    # main(
+    #     root_folder="D:/Documents_D/Mines/Cours/Master/Kernel/cost_matrices/",
+    #     archive_folder="D:/Documents_D/Mines/Cours/Master/Kernel/archives/",
+    #     urls_folder="D:/Documents_D/Mines/Cours/Master/Kernel/urls/",
+    #     nb_processes=1,
+    # )
