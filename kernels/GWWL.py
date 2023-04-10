@@ -4,162 +4,79 @@ import warnings
 from kernels.kernel import Kernel
 import networkx as nx
 import numpy as np
-import ot
+from ot import emd2
+from treeEditDistance import treeEditDistance
 
 Graph = nx.classes.graph.Graph
 
 
-#########################
-### Weisfeiler Lehman ###
-#########################
+def chain_representation(G, n, depth, cache=None, prev=None):
+    if cache is None:
+        cache = {}
+    alone = True
 
+    if (n, depth) in cache:
+        return cache[(n, depth)]
 
-def compute_neighbors_based_label(G: Graph, labels: dict, n: int) -> int:
-    label = hash(labels[n])
-    neighbors = tuple(
-        hash((labels[k], G.edges[k, n]["labels"][0]))
-        if (k, n) in G.edges
-        else hash(labels[k])
-        for k in G.neighbors(n)
+    label = G.nodes[n]["labels"][0]
+    label = label if prev is None else hash((label, G.edges[n, prev]["labels"][0]))
+    node_str = str(label % 1000170000)
+    neighbors_result = []
+
+    if depth > 0:
+        for k in G.neighbors(n):
+            alone = False
+            neighbor_result = chain_representation(G, k, depth - 1, cache, prev=n)
+            neighbors_result.append(neighbor_result)
+        if alone:
+            neighbor_result = chain_representation(G, n, depth - 1, cache)
+            neighbors_result.append(neighbor_result)
+
+    result = (
+        f"{node_str}({','.join(neighbors_result)})"
+        if len(neighbors_result) > 0
+        else f"{node_str}"
     )
-
-    return label, neighbors
-
-
-def WL_iterations(G: Graph, labels: dict, depth: int) -> int:
-    assert depth >= 1
-
-    new_labels = {
-        n: compute_neighbors_based_label(G=G, labels=labels, n=n) for n in G.nodes()
-    }
-
-    R = [(new_labels[n][0], Counter(new_labels[n][1])) for n in G.nodes()]
-    if depth == 1:
-        return [R]
-    return [R] + WL_iterations(G=G, labels=new_labels, depth=depth - 1)
+    cache[(n, depth)] = result
+    return result
 
 
 class GeneralizedWassersteinWeisfeilerLehmanKernel(Kernel):
-    def __init__(
-        self, depth: int, lambd: float = 1.0, weight: float = 0.5, *args, **kargs
-    ) -> None:
-        """
-        Implementation of the Wasserstein Weisfeiler-Lehman Graph Kernel.
-        See the following paper : https://arxiv.org/pdf/1906.01277.pdf
-
-        Parameters
-        ----------
-        depth : int
-            An integer representing the depth of iterations to be performed by Weisfeiler Lehman
-            algorithm. This should always be a non-negative integer.
-        """
+    def __init__(self, depth: int, lambd: float = 1.0, *args, **kargs) -> None:
         assert (
-            isinstance(depth, int) and depth >= 1
+            isinstance(depth, int) and depth >= 0
         ), "depth should be a non-negative integer"
-        assert isinstance(weight, float) and weight <= 1.0 and weight >= 0.0
         self.depth = depth
         self.l = lambd
-        self.w = weight
-        self.max_labels = 7  # See pad function
         super().__init__(*args, **kargs)
 
     def phi(self, x: Graph, *args, **kargs):
-        """
-        Generates the feature vector representation of given directed graph using Weisfeiler-Lehman graph
-        kernel.
-
-        Parameters
-        ----------
-        x : networkx.classes.graph.Graph
-            Input undirected graph to be represented in feature space
-
-        Returns
-        -------
-        list(collections.Counter) :
-            A list of counter objects where each counter representa the frequency of each labeled
-            substructure observed at `i-th` iteration.
-        """
-        labels = {n: x.nodes[n]["labels"][0] for n in x.nodes}
-        res = WL_iterations(G=x, labels=labels, depth=self.depth)
-        labels = np.array([[label for label, neighbors in batch] for batch in res])
-        neighbors = np.array(
-            [
-                [counters_to_vector(neighbors) for label, neighbors in batch]
-                for batch in res
-            ]
-        )
-        return labels, neighbors
+        return [chain_representation(x, n, depth=self.depth) for n in x.nodes()]
 
     def inner(self, X1, X2):
-        ## Labels
-        L1, L2 = X1[0], X2[0]
-        D_labels = np.equal(L1[:, :, None], L2[:, None, :]).astype(float)
-
-        ## neighbors
-        N1, N2 = X1[1], X2[1]
-        D_neighbors = np.zeros_like(D_labels)
-        long_shape = (L1.shape[1], L2.shape[1], 7, 7, 2)
-        short_shape = (L1.shape[1], L2.shape[1], 7 * 7, 2)
-        for batch in range(self.depth):
-            n1 = np.broadcast_to(N1[batch, :, None, :, None, :], long_shape).reshape(
-                short_shape
-            )
-            n2 = np.broadcast_to(N2[batch, None, :, None, :, :], long_shape).reshape(
-                short_shape
-            )
-            idx = np.nonzero(n1[..., 0] == n2[..., 0])
-            reunion = np.zeros(short_shape[:3])
-            reunion[idx] = np.minimum(n1[idx][:, 1], n2[idx][:, 1])
-            reunion = reunion.sum(axis=-1)
-
-            t1 = N1[batch, ..., 1].sum(axis=-1)
-            t2 = N2[batch, ..., 1].sum(axis=-1)
-            union = np.maximum(t1[:, None], t2[None, :])
-
-            with np.errstate(divide="ignore", invalid="ignore"):
-                D_neighbors[batch] = np.nan_to_num(reunion / union, nan=1.0)
-
-        # Merge
-        D_neighbors = D_neighbors * D_labels
-        D_labels = D_labels.mean(axis=0)
-        D_neighbors = D_neighbors.mean(axis=0)
-        D = D_labels + self.w * D_neighbors
-        D = D / (1 + self.w)
-        D = 1.0 - D
-        wasserstein = ot.emd2([], [], D)
+        D = treeEditDistance(X1, X2)
+        wasserstein = emd2([], [], D)
+        # return wasserstein
         return np.exp(-self.l * wasserstein)
-
-
-def counters_to_vector(counter, size=7):
-    x = tuple((node, freq) for node, freq in counter.items())
-    return x + ((np.NaN, 0),) * (size - len(x))
 
 
 def main():
     import timeit
-    import kernels.WWL
     from preprocessing.load import load_file
 
     G1 = load_file("data/training_data.pkl")[0]
     G2 = load_file("data/training_data.pkl")[1]
 
-    KernelG = GeneralizedWassersteinWeisfeilerLehmanKernel
-    Kernel = kernels.WWL.WassersteinWeisfeilerLehmanKernel
+    kernel = GeneralizedWassersteinWeisfeilerLehmanKernel(depth=3)
 
-    kernelg, kernel = KernelG(8, weight=1.0), Kernel(7)
-    K1g, K2g = kernelg.phi(G1), kernelg.phi(G2)
-    K1, K2 = kernel.phi(G1), kernel.phi(G2)
-    i = kernel.inner(K1, K2)
-    ig = kernelg.inner(K1g, K2g)
-    print(i, ig)
+    K1g, K2g = kernel.phi(G1), kernel.phi(G2)
+    print("Start")
+    print(kernel.inner(K1g, K2g))
+    print(kernel.inner(K1g, K1g))
+    print(kernel.inner(K2g, K2g))
 
-    timer = timeit.Timer(lambda: kernelg.inner(K1g, K2g))
+    timer = timeit.Timer(lambda: kernel.inner(K1g, K2g))
     print(f"Time for gwwl : {timer.timeit(1000)}")
-
-    timer = timeit.Timer(lambda: kernel.inner(K1, K2))
-    print(f"Time for wwl : {timer.timeit(1000)}")
-
-    pass
 
 
 if __name__ == "__main__":
