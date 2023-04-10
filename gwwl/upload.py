@@ -16,7 +16,14 @@ def process_folder(const, folder):
     # compress
     with open(os.devnull, "w") as devnull:
         subprocess.run(
-            ["tar", "-cjf", archive_file, folder],
+            [
+                "tar",
+                "-cjf",
+                archive_file,
+                "-C",
+                os.path.dirname(folder),
+                os.path.basename(folder),
+            ],
             stdout=devnull,
             stderr=subprocess.PIPE,
         )
@@ -44,10 +51,10 @@ def main(root_folder, archive_folder, urls_folder, nb_processes):
 
 
 if __name__ == "__main__":
-    fire.Fire(main)
-    # main(
-    #     root_folder="D:/Documents_D/Mines/Cours/Master/Kernel/cost_matrices/",
-    #     archive_folder="D:/Documents_D/Mines/Cours/Master/Kernel/archives/",
-    #     urls_folder="D:/Documents_D/Mines/Cours/Master/Kernel/urls/",
-    #     nb_processes=8,
-    # )
+    # fire.Fire(main)
+    main(
+        root_folder="D:/Documents_D/Mines/Cours/Master/Kernel/cost_matrices/",
+        archive_folder="D:/Documents_D/Mines/Cours/Master/Kernel/archives/",
+        urls_folder="D:/Documents_D/Mines/Cours/Master/Kernel/urls/",
+        nb_processes=1,
+    )
