@@ -47,14 +47,14 @@ def main():
 
     pbounds = {
         "depth": (3, 9),
-        "lambd": (0.5, 5.0),
-        "weight": (0.0, 1.0),
+        "lambd": (0.5, 5),
+        "weight": (0.0, 0.5),
     }
 
     optimizer = BayesianOptimization(
         f=test,
         pbounds=pbounds,
-        random_state=0,
+        random_state=2,
     )
 
     if os.path.isfile(json_path):
@@ -65,7 +65,11 @@ def main():
     logger = JSONLogger(path=json_path, reset=False)
     optimizer.subscribe(Events.OPTIMIZATION_STEP, logger)
     optimizer.set_gp_params(alpha=1e-3)
+<<<<<<< HEAD
     optimizer.probe(params=[4, 3.0, 0.0])
+=======
+    optimizer.probe(params=[5, 3.0, 0.])
+>>>>>>> 4d7ef36 ([~] Final result optimization GWWL)
     if len(optimizer.space.target) > 0:
         optimizer._gp.fit(optimizer.space.params, optimizer.space.target)
     optimizer.maximize(n_iter=60, init_points=15)
