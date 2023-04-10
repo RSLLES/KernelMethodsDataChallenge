@@ -8,17 +8,18 @@ import os
 from treeEditDistance import treeEditDistance
 from functools import partial
 
-path = "./gwwl/cost_matrices/"
-
 
 def compute(const, var):
     try:
-        q, Z, granularite = const
+        q, Z, granularite, path = const
         r, c = var
 
         for k, (i, j) in enumerate(zip(r, c)):
-            filename = f"{i}_{j}.npy"
-            file = os.path.join(path, filename)
+            directory = os.path.join(path, str(i))
+            if not os.path.exists(directory):
+                os.makedirs(directory)
+
+            file = os.path.join(directory, f"{j}.npy")
             if not os.path.isfile(file):
                 D = treeEditDistance(Z[i], Z[j])
                 np.save(file, D)
@@ -31,7 +32,7 @@ def compute(const, var):
         return None
 
 
-def main(processes=None, flip=False):
+def main(path, processes=None, flip=False):
     print("Loading data...")
     ds, ds_val = load_data(config=config)
     X = ds.X
@@ -52,7 +53,7 @@ def main(processes=None, flip=False):
     with multiprocessing.Pool(processes=processes) as p:
         m = multiprocessing.Manager()
         q = m.Queue(maxsize=n * (n + 1) // 2)
-        func = partial(compute, (q, Z, granularite))
+        func = partial(compute, (q, Z, granularite, path))
         res = p.map_async(func, zip(R, C))
 
         # Wait
