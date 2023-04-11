@@ -64,7 +64,7 @@ def main(path, processes=None, flip=False):
         s = 0
         for _ in tqdm(
             p.imap_unordered(func, zip(R, C)),
-            total=len(R) // granularite,
+            total=len(R),
             desc="Inner prod...",
         ):
             s += 1
