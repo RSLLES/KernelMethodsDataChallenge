@@ -22,7 +22,7 @@ def test(log_lambd):
             lambd=np.power(10, log_lambd),
             use_cache=True,
         )
-        kernel.set_processes(None)
+        kernel.set_processes(-1)
         print(f"Processes : {kernel.processes}")
 
         # Computing kernel
@@ -30,7 +30,7 @@ def test(log_lambd):
         K = kernel(ds.X)
 
         # Training
-        scores = evaluate_perfs(ds=ds, K=K, processes=kernel.processes // 2)
+        scores = evaluate_perfs(ds=ds, K=K, processes=kernel.processes)
 
         scores = [np.array(score) for score in scores]
         average_scores = sum(scores) / len(scores)
