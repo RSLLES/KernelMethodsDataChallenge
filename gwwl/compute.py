@@ -9,6 +9,17 @@ from treeEditDistance import treeEditDistance
 from functools import partial
 
 
+def search_for(const, var):
+    try:
+        path = const
+        i, j = var
+        file = os.path.join(path, str(i), f"{j}.npy")
+        return os.path.isfile(file)
+    except KeyboardInterrupt:
+        print("Caught KeyboardInterrupt, terminating workers")
+        return None
+
+
 def compute(const, var):
     try:
         q, Z, granularite, path = const
@@ -45,7 +56,23 @@ def main(path, processes=None, flip=False):
 
     Z = [kernel.phi(x) for x in tqdm(X, desc="Computing Embedding ...")]
 
+    # Analyse
     R, C = np.triu_indices(n)
+    with multiprocessing.Pool(processes=processes) as p:
+        m = multiprocessing.Manager()
+        func = partial(search_for, path)
+        res = []
+        for exist in tqdm(
+            p.imap_unordered(func, zip(R, C)),
+            total=len(R),
+            desc="Searching for files...",
+        ):
+            res.append(exist)
+        K = np.array(res)
+
+    mask = ~K
+    R, C = R[mask], C[mask]
+
     if flip:
         R = np.flip(R)
         C = np.flip(C)
