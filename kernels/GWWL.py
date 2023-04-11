@@ -63,9 +63,10 @@ import os
 
 
 class GeneralizedWassersteinWeisfeilerLehmanKernelSum(Kernel):
-    def __init__(self, root: str, *args, **kargs) -> None:
+    def __init__(self, root: str, lambd: float = 1.0, *args, **kargs) -> None:
         super().__init__(*args, **kargs)
         self.root = root
+        self.l = lambd
 
     def _multi_inner_solo(self, H):
         try:
@@ -87,7 +88,7 @@ class GeneralizedWassersteinWeisfeilerLehmanKernelSum(Kernel):
         X1, X2 = min(X1, X2), max(X1, X2)
         path = os.path.join(self.root, str(X1), str(X2) + ".npy")
         D = np.load(path)
-        return D.sum()
+        return np.exp(-self.l * D.sum())
 
 
 class GeneralizedWassersteinWeisfeilerLehmanKernelImport(Kernel):
