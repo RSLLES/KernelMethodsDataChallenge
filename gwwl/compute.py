@@ -79,7 +79,7 @@ def main(path, processes=None, flip=False):
     R, C = np.array_split(R, processes), np.array_split(C, processes)
     with multiprocessing.Pool(processes=processes) as p:
         m = multiprocessing.Manager()
-        q = m.Queue(maxsize=n * (n + 1) // 2)
+        q = m.Queue(maxsize=len(R))
         func = partial(compute, (q, Z, granularite, path))
         res = p.map_async(func, zip(R, C))
 
