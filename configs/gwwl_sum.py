@@ -9,7 +9,7 @@ k_folds_cross_val = 6
 from kernels.GWWL import GeneralizedWassersteinWeisfeilerLehmanKernelSum
 
 kernel = GeneralizedWassersteinWeisfeilerLehmanKernelSum(
-    path="../cost_matrices/",
+    root="../cost_matrices/",
     use_cache=True,
 )
 
