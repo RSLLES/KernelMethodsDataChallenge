@@ -60,6 +60,37 @@ class GeneralizedWassersteinWeisfeilerLehmanKernel(Kernel):
         return np.exp(-self.l * wasserstein)
 
 
+import os
+
+
+class GeneralizedWassersteinWeisfeilerLehmanKernelSum(Kernel):
+    def __init__(self, root: str, *args, **kargs) -> None:
+        super().__init__(*args, **kargs)
+        self.root = root
+
+    def _multi_inner_solo(self, H):
+        try:
+            r, c = H
+            K = np.zeros((len(r),))
+            for k, (i, j) in enumerate(zip(r, c)):
+                K[k] = self.inner(i, j)  # And not self._z[i], self._z[j]
+                if k % self.granularite == 0:
+                    self.q.put(True)
+            return K
+        except KeyboardInterrupt:
+            print("Caught KeyboardInterrupt, terminating workers")
+            return None
+
+    def phi(self, x, *args, **kargs):
+        return x
+
+    def inner(self, X1, X2):
+        X1, X2 = min(X1, X2), max(X1, X2)
+        path = os.path.join(self.root, str(X1), str(X2) + ".npy")
+        D = np.load(path)
+        return D.sum()
+
+
 def main():
     import timeit
     from preprocessing.load import load_file
