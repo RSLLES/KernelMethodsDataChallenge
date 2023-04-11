@@ -42,6 +42,7 @@ def main(path, processes=None, flip=False):
     print("Loading data...")
     ds, _ = load_data(config=config)
     X = ds.X
+    n = len(X)
 
     kernel = config.kernel
     kernel.set_processes(processes)
@@ -49,6 +50,7 @@ def main(path, processes=None, flip=False):
 
     Z = [kernel.phi(x) for x in tqdm(X, desc="Computing Embedding ...")]
 
+    R, C = np.triu_indices(n)
     if flip:
         R = np.flip(R)
         C = np.flip(C)
