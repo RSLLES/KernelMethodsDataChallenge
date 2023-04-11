@@ -30,7 +30,7 @@ def test(log_lambd):
         K = kernel(ds.X)
 
         # Training
-        scores = evaluate_perfs(ds=ds, K=K, processes=kernel.processes)
+        scores = evaluate_perfs(ds=ds, K=K, processes=kernel.processes // 2)
 
         scores = [np.array(score) for score in scores]
         average_scores = sum(scores) / len(scores)
@@ -48,7 +48,7 @@ def main():
     json_path = os.path.join(path, "logs.json")
 
     pbounds = {
-        "log_lambd": (-2, 2),
+        "log_lambd": (-2.0, 0.0),
     }
 
     optimizer = BayesianOptimization(
@@ -67,7 +67,7 @@ def main():
     # optimizer.set_gp_params(alpha=1e-3)
     if len(optimizer.space.target) > 0:
         optimizer._gp.fit(optimizer.space.params, optimizer.space.target)
-    optimizer.maximize(n_iter=25, init_points=8)
+    optimizer.maximize(n_iter=25, init_points=7)
 
     df = pd.DataFrame(list(optimizer.res))
     df.index.name = "Iteration"
