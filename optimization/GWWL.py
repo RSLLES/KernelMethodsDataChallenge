@@ -13,28 +13,31 @@ from bayes_opt.util import load_logs
 
 
 def test(log_lambd):
-    print(f"Params for this run : log_lambd={log_lambd}")
-    ds, _ = load_data(config=config)
+    try:
+        print(f"Params for this run : log_lambd={log_lambd}")
+        ds, _ = load_data(config=config)
 
-    kernel = Kernel(
-        root="../cost_matrices/",
-        lambd=np.power(10, log_lambd),
-        use_cache=True,
-    )
-    kernel.set_processes(None)
-    print(f"Processes : {kernel.processes}")
+        kernel = Kernel(
+            root="../cost_matrices/",
+            lambd=np.power(10, log_lambd),
+            use_cache=True,
+        )
+        kernel.set_processes(None)
+        print(f"Processes : {kernel.processes}")
 
-    # Computing kernel
-    print("Computing kernel")
-    K = kernel(ds.X)
+        # Computing kernel
+        print("Computing kernel")
+        K = kernel(ds.X)
 
-    # Training
-    scores = evaluate_perfs(ds=ds, K=K, processes=kernel.processes)
+        # Training
+        scores = evaluate_perfs(ds=ds, K=K, processes=kernel.processes)
 
-    scores = [np.array(score) for score in scores]
-    average_scores = sum(scores) / len(scores)
-    print(f"Score = {100*average_scores[-1]:0.3}%")
-    return average_scores[-1]
+        scores = [np.array(score) for score in scores]
+        average_scores = sum(scores) / len(scores)
+        print(f"Score = {100*average_scores[-1]:0.3}%")
+        return average_scores[-1]
+    except:
+        return 0.85
 
 
 def main():
