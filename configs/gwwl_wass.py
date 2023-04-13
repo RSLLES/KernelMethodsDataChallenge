@@ -6,11 +6,10 @@ y = "training_labels.pkl"
 k_folds_cross_val = 6
 
 ### Kernel ###
-from kernels.GWWL import GeneralizedWassersteinWeisfeilerLehmanKernelImport
+from kernels.GWWL import GeneralizedWassersteinWeisfeilerLehmanKernel
 
-kernel = GeneralizedWassersteinWeisfeilerLehmanKernelImport(
-    lambd=1.0,
-    root="../cost_matrices/",
+kernel = GeneralizedWassersteinWeisfeilerLehmanKernel(
+    lambd=0.15,
     use_cache=True,
 )
 
