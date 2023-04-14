@@ -1,0 +1,19 @@
+\begin{thebibliography}{1}
+
+\bibitem{callut2011sequence}
+J{\'e}r{\^o}me Callut, Pierre Dupont, and Marco Saerens.
+\newblock Sequence classification in the jensen-shannon embedding.
+\newblock 2011.
+
+\bibitem{schulz2022generalized}
+Till~Hendrik Schulz, Tam{\'a}s Horv{\'a}th, Pascal Welke, and Stefan Wrobel.
+\newblock A generalized weisfeiler-lehman graph kernel.
+\newblock {\em Machine Learning}, 111(7):2601--2629, 2022.
+
+\bibitem{togninalli2019wasserstein}
+Matteo Togninalli, Elisabetta Ghisu, Felipe Llinares-L{\'o}pez, Bastian Rieck,
+  and Karsten Borgwardt.
+\newblock Wasserstein weisfeiler-lehman graph kernels.
+\newblock {\em Advances in neural information processing systems}, 32, 2019.
+
+\end{thebibliography}
