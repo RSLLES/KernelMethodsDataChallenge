@@ -8,7 +8,8 @@ setup(
         Extension(
             "wgwl",
             ["module.cpp", "lib/hungarian/hungarian.cpp"],
-            extra_compile_args=["/std:c++17"],
+            extra_compile_args=["/std:c++17", "-fopenmp"],
+            extra_link_args=["-fopenmp"],
         )
     ],
     include_dirs=[np.get_include(), "./lib/"],

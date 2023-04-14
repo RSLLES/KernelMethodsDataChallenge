@@ -112,11 +112,19 @@ static PyObject *computeVectorized(PyObject *self, PyObject *args)
                     int remainingIterations = numIterations - completedIterations;
                     double remainingSeconds = timePerIteration * remainingIterations;
                     int remainingMinutes = static_cast<int>(remainingSeconds / 60);
+                    int elapsedMinutes = static_cast<int>(elapsedSeconds / 60);
                     int remainingHours = 0;
                     if (remainingMinutes >= 60)
                     {
                         remainingHours = remainingMinutes / 60;
                         remainingMinutes %= 60;
+                    }
+
+                    int elapsedHours = 0;
+                    if (elapsedMinutes >= 60)
+                    {
+                        elapsedHours = elapsedMinutes / 60;
+                        elapsedMinutes %= 60;
                     }
 
                     double progress = static_cast<double>(completedIterations) / numIterations;
@@ -125,15 +133,16 @@ static PyObject *computeVectorized(PyObject *self, PyObject *args)
                     std::string progressBar(numFilled, '#');
                     std::string remainingBar(barWidth - numFilled, '-');
 
-                    std::cout << " Progress: [" << progressBar << remainingBar << "] "
+                    std::cout << "Progress: [" << progressBar << remainingBar << "] "
                               << completedIterations << "/" << numIterations;
 
                     if (remainingHours > 0)
                     {
-                        std::cout << " (" << remainingHours << " hr ";
+                        std::cout << " (";
+                        std::cout << remainingHours << " hr ";
                     }
 
-                    std::cout << remainingMinutes << " min remaining) -  "
+                    std::cout << remainingMinutes << " min remaining)"
                               << lookup.size()
                               << "\r" << std::flush;
                 }

@@ -118,13 +118,14 @@ double ted(tree<T> &t1, const iter &i1, tree<T> &t2, const iter &i2, HungarianAl
 
     // Compute cost
     vector<int> assignment;
-    double solve = HungAlgo.Solve(costMatrix, assignment);
+    double solve = cost + HungAlgo.Solve(costMatrix, assignment);
 #pragma omp critical
     {
         constexpr size_t threshold = 100000000;
         constexpr size_t nb_to_remove = 50000000;
         if (lookup.size() > threshold)
         {
+            std::cout << "Cleaning ...";
             auto start_it = lookup.begin();
             auto end_it = start_it;
             std::advance(end_it, nb_to_remove);
@@ -132,7 +133,7 @@ double ted(tree<T> &t1, const iter &i1, tree<T> &t2, const iter &i2, HungarianAl
         }
         lookup[h1] = static_cast<float>(solve);
     }
-    return cost + solve;
+    return solve;
 }
 
 template <typename T>
