@@ -31,7 +31,16 @@ def compute(const, var):
                 os.makedirs(directory)
 
             file = os.path.join(directory, f"{j}.npy")
-            if not os.path.isfile(file):
+            compute = True
+            if os.path.isfile(file):
+                try:
+                    _ = np.load(file)
+                    compute = False
+                except:
+                    print(f"{file} corrupted.")
+                    os.remove(file)
+
+            if compute:
                 D = treeEditDistance(Z1[i], Z2[j])
                 np.save(file, D)
 

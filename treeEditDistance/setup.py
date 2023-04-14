@@ -2,12 +2,14 @@ from setuptools import setup, Extension
 import numpy as np
 
 setup(
-    name="treeEditDistance",
+    name="wgwl",
     version="0.1",
     ext_modules=[
         Extension(
-            "treeEditDistance", ["treeEditDistance.cpp", "lib/hungarian/hungarian.cpp"]
+            "wgwl",
+            ["module.cpp", "lib/hungarian/hungarian.cpp"],
+            extra_compile_args=["/std:c++17"],
         )
     ],
-    include_dirs=[np.get_include()],
+    include_dirs=[np.get_include(), "./lib/"],
 )

@@ -128,6 +128,15 @@ class TestWeisfeilerLehmanKernel(unittest.TestCase):
     #     np.testing.assert_almost_equal(kernel_values, grakel_values)
 
 
+class TestGWL(unittest.TestCase):
+    def setUp(self) -> None:
+        rd.seed(0)
+        self.graphs = [randomGraph() for _ in range(5)]
+
+    def test_sum(self):
+        pass
+
+
 def randomGraph(p_edges=0.3, nb_nodes=10, nb_labels=5):
     edges = []
     for i in range(nb_nodes):

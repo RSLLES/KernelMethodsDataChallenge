@@ -41,6 +41,9 @@ def chain_representation(G, n, depth, cache=None, prev=None):
     return result
 
 
+import wgwl
+
+
 class GeneralizedWassersteinWeisfeilerLehmanKernel(Kernel):
     def __init__(self, depth: int, lambd: float = 1.0, *args, **kargs) -> None:
         assert (
@@ -50,13 +53,34 @@ class GeneralizedWassersteinWeisfeilerLehmanKernel(Kernel):
         self.l = lambd
         super().__init__(*args, **kargs)
 
+    def _solo_phi(self, x):
+        print("Custom solo phi")
+        # z = [chain_representation(x, n, depth=self.depth) for n in x.nodes()]
+
+        def work_with_cache(x):
+            if self.use_cache:
+                h = hash(x)
+                if h not in self.cache:
+                    self.cache[h] = self.phi(x)
+                    self.nb_heavy_call += 1
+                return self.cache[h]
+            self.nb_heavy_call += 1
+            return self.phi(x)
+
+        z = [
+            work_with_cache(x)
+            for x in self._tqdm(x, desc="[Fit_Phi] Computing Embedding")
+        ]
+
+        K = wgwl.wgwlVec(z)
+        np.save("wgwl.npy", K)
+        return np.exp(-self.l * K)
+
     def phi(self, x: Graph, *args, **kargs):
         return [chain_representation(x, n, depth=self.depth) for n in x.nodes()]
 
     def inner(self, X1, X2):
-        D = treeEditDistance(X1, X2)
-        wasserstein = emd2([], [], D)
-        return np.exp(-self.l * wasserstein)
+        pass
 
 
 import os
