@@ -42,11 +42,11 @@ def perf(h):
         K_test = K[idx_test][:, idx_train]
         y_test = y[idx_test]
 
-        print(f"[{fold}] Solving ...")
+        print(f"[{fold+1}] Solving ...")
         svc = SVC(kernel="precomputed", verbose=True)
         svc.fit(X=K_train, y=y_train)
         score = score_metric(svc=svc, X=K_test, y=y_test.astype(bool))
-        print_metrics(fold, score)
+        print_metrics(fold + 1, score)
         return score
     except KeyboardInterrupt:
         print("Caught KeyboardInterrupt, terminating workers")
@@ -80,7 +80,7 @@ def run(config, performance, predict, filename, verbose, processes):
 
     # Training
     if performance:
-        scores = evaluate_perfs(ds=ds, K=K, processes=kernel.processes)
+        scores = evaluate_perfs(ds=ds, K=K, processes=2)
         # Summary
         print("### Summary ###")
         summary = get_summary(scores)
