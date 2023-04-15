@@ -1,11 +1,9 @@
 from typing import List
-from collections import Counter
-import warnings
 from kernels.kernel import Kernel
 import networkx as nx
 import numpy as np
 from ot import emd2
-from treeEditDistance import treeEditDistance
+import ctypes
 
 Graph = nx.classes.graph.Graph
 
@@ -19,8 +17,13 @@ def chain_representation(G, n, depth, cache=None, prev=None):
         return cache[(n, depth)]
 
     label = G.nodes[n]["labels"][0]
-    label = label if prev is None else hash((label, G.edges[n, prev]["labels"][0]))
-    node_str = str(label % 1000170000)
+    label_hashed = (
+        hash((label, -1))
+        if prev is None
+        else hash((label, G.edges[n, prev]["labels"][0]))
+    )
+    label_hashed = ctypes.c_uint32(label_hashed).value
+    node_str = str(label_hashed)
     neighbors_result = []
 
     if depth > 0:

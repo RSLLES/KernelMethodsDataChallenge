@@ -10,36 +10,37 @@
 #define COST_RENAME 1
 #define COST_MOVE 1
 
-using LookupTable = std::unordered_map<size_t, float>;
+#define THRESHOLD 100000000
+#define NB_TO_REMOVE 50000000
 
-namespace std
+using hash_type = uint64_t;
+
+using LookupTable = std::unordered_map<hash_type, float>;
+
+inline hash_type merge_hash(const hash_type &a, const hash_type &b)
 {
-    template <typename T1, typename T2>
-    struct hash<std::pair<T1, T2>>
-    {
-        size_t operator()(const std::pair<T1, T2> &p) const
-        {
-            size_t h1 = hash<T1>()(p.first);
-            size_t h2 = hash<T2>()(p.second);
-            return h1 ^ (h2 << 1);
-        }
-    };
+    return a >= b ? a * a + a + b : a + b * b;
+}
+
+inline hash_type sim_merge_hash(const hash_type &a, const hash_type &b)
+{
+    return merge_hash(a + b, a * b);
 }
 
 template <typename T>
-std::pair<size_t, size_t> count_and_hash_nodes_below(const tree<T> &t, const typename tree<T>::pre_order_iterator &it, size_t depth = 0)
+std::pair<size_t, hash_type> count_and_hash_nodes_below(const tree<T> &t, const typename tree<T>::pre_order_iterator &it, char depth = 0)
 {
     size_t count = 1; // start with 1 to include the current node
-    int value = *(it);
-    size_t hash = std::hash<int>{}(value);
+
+    hash_type hash = static_cast<hash_type>(*(it));
     for (auto child_it = t.begin(it); child_it != t.end(it); ++child_it)
     {
         auto [c, h] = count_and_hash_nodes_below(t, child_it, depth + 1);
-        hash ^= (h << 1) | (h >> (sizeof(size_t) * CHAR_BIT - 1));
+        hash = sim_merge_hash(hash, h);
         count += c;
     }
 
-    hash ^= depth; // combine hash and depth
+    hash = merge_hash(hash, depth);
     return {count, hash};
 }
 
@@ -62,11 +63,20 @@ double ted(tree<T> &t1, const iter &i1, tree<T> &t2, const iter &i2, HungarianAl
     // hash trees
     auto [c1, h1] = count_and_hash_nodes_below(t1, i1);
     auto [c2, h2] = count_and_hash_nodes_below(t2, i2);
-    h1 ^= (h2 << 1) | (h2 >> (sizeof(size_t) * CHAR_BIT - 1));
-    auto it = lookup.find(h1);
-    if (it != lookup.end())
+    hash_type h = sim_merge_hash(h1, h2);
+
+    double cost = 0.0;
+#pragma omp critical
     {
-        return static_cast<double>(it->second); // Return precomputed TED value.
+        auto it = lookup.find(h);
+        if (it != lookup.end())
+        {
+            cost = static_cast<double>(it->second); // Return precomputed TED value.
+        }
+    }
+    if (cost != 0.0)
+    {
+        return cost;
     }
 
     if (*i1 == -1 && *i2 != -1)
@@ -78,7 +88,7 @@ double ted(tree<T> &t1, const iter &i1, tree<T> &t2, const iter &i2, HungarianAl
         return COST_MOVE * c1;
     }
 
-    double cost = *i1 == *i2 ? 0.0 : COST_RENAME;
+    cost = *i1 == *i2 ? 0.0 : COST_RENAME;
 
     // If both have no childs
     size_t size1 = t1.number_of_children(i1), size2 = t2.number_of_children(i2);
@@ -121,23 +131,21 @@ double ted(tree<T> &t1, const iter &i1, tree<T> &t2, const iter &i2, HungarianAl
     double solve = cost + HungAlgo.Solve(costMatrix, assignment);
 #pragma omp critical
     {
-        constexpr size_t threshold = 100000000;
-        constexpr size_t nb_to_remove = 50000000;
-        if (lookup.size() > threshold)
+        if (lookup.size() > THRESHOLD)
         {
             std::cout << "Cleaning ...";
             auto start_it = lookup.begin();
             auto end_it = start_it;
-            std::advance(end_it, nb_to_remove);
+            std::advance(end_it, NB_TO_REMOVE);
             lookup.erase(start_it, end_it);
         }
-        lookup[h1] = static_cast<float>(solve);
+        lookup[h] = static_cast<float>(solve);
     }
     return solve;
 }
 
 template <typename T>
-double kernel(std::vector<tree<T>> &subtrees1, std::vector<tree<T>> &subtrees2, LookupTable &lookup)
+double kernel(std::vector<tree<T>> subtrees1, std::vector<tree<T>> subtrees2, LookupTable &lookup)
 {
     const size_t len1 = subtrees1.size(), len2 = subtrees2.size();
     std::vector<double> distances(len1 * len2);

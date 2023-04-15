@@ -8,12 +8,15 @@
 #include <numpy/arrayobject.h>
 #include <omp.h>
 #include <ctime>
+#include <cmath>
+
+using base_type = uint32_t;
 
 static PyObject *computeVectorized(PyObject *self, PyObject *args)
 {
     import_array();
     PyObject *list1;
-    PyObject *list2;
+    PyObject *list2 = NULL;
 
     if (!PyArg_ParseTuple(args, "O|O", &list1, &list2))
     {
@@ -21,7 +24,7 @@ static PyObject *computeVectorized(PyObject *self, PyObject *args)
     }
 
     bool fit = false;
-    if (!PyList_Check(list2))
+    if (list2 == NULL)
     {
         // If list2 is not provided, set it equal to list1
         Py_INCREF(list1);
@@ -53,37 +56,37 @@ static PyObject *computeVectorized(PyObject *self, PyObject *args)
         }
     }
 
-    std::vector<std::vector<tree<int>>> v1s(len1), v2s(len2);
+    std::vector<std::vector<tree<base_type>>> v1s(len1), v2s(len2);
 
     for (int i = 0; i < len1; ++i)
     {
-        std::vector<tree<int>> v1(arr1[i].size());
+        std::vector<tree<base_type>> v1(arr1[i].size());
         for (int k = 0; k < arr1[i].size(); ++k)
         {
-            v1[k] = build_tree<int>(arr1[i][k]);
+            v1[k] = build_tree<base_type>(arr1[i][k]);
         }
         v1s[i] = std::move(v1);
     }
 
     for (int i = 0; i < len2; ++i)
     {
-        std::vector<tree<int>> v2(arr2[i].size());
+        std::vector<tree<base_type>> v2(arr2[i].size());
         for (int k = 0; k < arr2[i].size(); ++k)
         {
-            v2[k] = build_tree<int>(arr2[i][k]);
+            v2[k] = build_tree<base_type>(arr2[i][k]);
         }
         v2s[i] = std::move(v2);
     }
 
     std::vector<std::vector<double>> res(len1, std::vector<double>(len2));
-    int numThreads = omp_get_num_procs();
+    int numThreads = omp_get_num_procs() - 2;
     int numIterations = fit ? len1 * (len2 + 1) / 2 : len1 * len2;
     int completedIterations = 0;
     double timePerIteration = 0.0;
     time_t startTime = time(nullptr);
     LookupTable lookup;
 
-#pragma omp parallel for num_threads(numThreads) schedule(dynamic, 64) collapse(2) reduction(+ : completedIterations)
+#pragma omp parallel for num_threads(numThreads) schedule(dynamic, 64)
     for (int i = 0; i < len1; ++i)
     {
         for (int j = fit ? i : 0; j < len2; ++j)
@@ -95,12 +98,17 @@ static PyObject *computeVectorized(PyObject *self, PyObject *args)
                 res[j][i] = res[i][j];
             }
 
-            ++completedIterations;
+            bool print = false;
+#pragma omp critical
+            {
+                ++completedIterations;
+                print = (completedIterations % 500 == 0);
+            }
 
             // Update progress bar/counter
-            if (completedIterations % 500 == 0)
+            if (print)
             {
-#pragma omp critical
+                // #pragma omp critical
                 {
 
                     time_t currentTime = time(nullptr);
@@ -128,29 +136,38 @@ static PyObject *computeVectorized(PyObject *self, PyObject *args)
                     }
 
                     double progress = static_cast<double>(completedIterations) / numIterations;
-                    int barWidth = 50;
+                    int barWidth = 25;
                     int numFilled = static_cast<int>(progress * barWidth);
                     std::string progressBar(numFilled, '#');
                     std::string remainingBar(barWidth - numFilled, '-');
 
-                    std::cout << "Progress: [" << progressBar << remainingBar << "] "
+                    std::cout << "Progress: "
+                              << static_cast<int>(round(progress * 100.0)) << "% "
+                              << "[" << progressBar << remainingBar << "] "
                               << completedIterations << "/" << numIterations;
+                    std::cout << " ( ";
+
+                    if (elapsedHours > 0)
+                    {
+                        std::cout << elapsedHours << " hr ";
+                    }
+
+                    std::cout << elapsedMinutes << " min elapsed < ";
 
                     if (remainingHours > 0)
                     {
-                        std::cout << " (";
                         std::cout << remainingHours << " hr ";
                     }
 
-                    std::cout << remainingMinutes << " min remaining)"
-                              << lookup.size()
-                              << "\r" << std::flush;
+                    std::cout << remainingMinutes << " min remaining)";
+
+                    std::cout << std::string(10, ' ') << "\r" << std::flush;
                 }
             }
         }
     }
 
-    // std::cout << std::endl; // Print newline after progress bar is complete
+    std::cout << std::endl; // Print newline after progress bar is complete
 
     // Build numpy array from C array
     npy_intp dims[] = {len1, len2};
@@ -171,7 +188,7 @@ static PyObject *computeVectorized(PyObject *self, PyObject *args)
 
 static PyMethodDef wgwl_methods[] = {
     {"wgwlVec", computeVectorized, METH_VARARGS, "Vectorized version."},
-    {NULL, NULL}};
+    {NULL, NULL, 0, NULL}};
 
 static struct PyModuleDef wgwlModule = {
     PyModuleDef_HEAD_INIT,
