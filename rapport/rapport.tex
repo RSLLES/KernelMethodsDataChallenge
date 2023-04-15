@@ -1,5 +1,6 @@
 \documentclass{IEEEtran}
 \usepackage{graphicx}
+\usepackage{hyperref}
 \usepackage{amsmath}
 \usepackage{cite}
 \usepackage{booktabs}
@@ -7,10 +8,20 @@
 \usepackage{amsfonts}
 \usepackage{listings}
 \usepackage{array}
-\usepackage{listings}
+\usepackage{mathtools}
 \newcolumntype{P}[1]{>{\centering\arraybackslash}p{#1}}
 \DeclareCaptionType{equ}[][]
 
+\DeclarePairedDelimiter\abs{\lvert}{\rvert}%
+\DeclarePairedDelimiter\norm{\lVert}{\rVert}%
+
+\makeatletter
+\let\oldabs\abs
+\def\abs{\@ifstar{\oldabs}{\oldabs*}}
+
+\let\oldnorm\norm
+\def\norm{\@ifstar{\oldnorm}{\oldnorm*}}
+\makeatother
 
 \markboth{Kernels methods for machine learning : Class 2022-2023, MVA MSc}{Last Name \MakeLowercase{\textit{et al.}}: Title}
 
@@ -65,7 +76,7 @@ Our project's structure looks like this:
 \end{figure}
 
 
-Here is the converted LaTeX item list:
+Here is a brief presentation of the contents:
 
 \begin{itemize}
     \item \texttt{data/}: This folder contains test and training datasets and labels.
@@ -85,7 +96,7 @@ Here is the converted LaTeX item list:
     \item \texttt{svc/}: This folder implements our custom SVC implementation.
 \end{itemize}
 
-Note that we deployed several \texttt{unittest}s to test important objects, especially SVC and kernels. These were tested against the well-known scikit-learn implementation. This protocol ensures that any modification, especially towards optimization, will not break our work pipeline. Furthermore, it ensures that our tools are accurate and that our results are reproducible.
+Note that we deployed several \texttt{unittest}s to test important objects, especially SVC and kernels. These were tested against the well-known \texttt{scikit-learn} implementation. This protocol ensures that any modification, especially towards optimization, will not break our work pipeline. Furthermore, it ensures that our tools are accurate and that our results are reproducible.
 
 \subsection{Comparing different solutions}
 We performed cross-validation to compare the effectiveness of different kernels. We chose to use a 6-fold cross-validation process on the molecule dataset, which consisted of 6000 molecules. The dataset was randomly split into six sets of 1000 molecules each, with a fixed seed for reproducibility.
@@ -115,46 +126,77 @@ Similar output tables for all tested kernels are store in the \texttt{results/} 
     \label{tab:example}
 \end{table}
 
-Please refer to the online Github repository for further details [REF]. Additionally, all our results are available in the appendix.
-https://github.com/RSLLES/KernelMethodsDataChallenge/blob/main/results/README.md
+Please refer to the online Github repository for further details.
+Additionally, all our results are available in the appendix.
 
 \subsection{Optimizing a solution}
 To optimize our chosen kernel parameters, we used the same 6-fold cross-validation method as previously mentioned. However, in this step, we performed a Bayesian search within a parameter grid to obtain optimal values.
 
 This method is highly efficient in fine-tuning parameters because it can optimize functions that are computationally expensive and where gradient computation is not possible. All the results that we present in this report correspond to the best version of a kernel obtained after hyperparameter tuning.
 
-
-
 \subsection{Faster Inference}
 As we will soon discuss, computing kernels with graphs can be quite expensive. Therefore, it was mandatory to optimize our code as much as possible to avoid any loss of time and ensure optimal overall performance.
 
-Firstly, the kernel's gram matrix was computed and then split according to specific indices for each fold. This strategy prevents extensive recomputation. When fitting the SVC (i.e., computing the support vectors given the training set), only half of the matrix was computed as the matrix is symmetric positive definite.
+Firstly, the kernel's Gram matrix was pre-computed when possible and then split according to specific indices for each fold. This strategy prevents expensive recomputations. Otherwise, it is calculated on the fly when fitting the SVC and only half of the matrix has to be computed as the matrix is symmetric.
 
-Furthermore, nearly all our kernels can be decomposed into two steps: a heavy step computing an embedding form of a graph (similar to the embedding $\phi(x)$ in the RKHS) and a lighter operation between those two embeddings (similar to the inner product in the RKHS). Given the pipeline before, with one graph (resp two) of size $n$ (resp $n,m$), one can see that the heavy method phi could only be called $n$ (resp $n+m$) times at the beginning, while the lighter operation must be called to fill the gram matrix, i.e., $n(n+1)/2$ (resp $n*m$) times. Untangling those operations drastically increases performances as it decreases the program's complexity by one degree.
+Furthermore, nearly all our kernels can be decomposed into two steps of different complexity: a heavy step computing an embedding of a graph (the embedding $\phi(x)$ in the RKHS) and a lighter operation between those two embeddings (the inner product in the RKHS). Given the pipeline before, with one subset of graphs (resp. two) of size $n$ (resp. $n,m$), one can see that the heavy method $\phi$ could only be called $n$ (resp $n+m$) times at the beginning, while the lighter dot product must be called to fill the Gram matrix, only its upper-triangular part in the one-subset case which leads to $n(n+1)/2$ operations (resp $n*m$) times. Separating these operations drastically increases performance as it decreases the program's complexity by one degree.
 
 Finally, we deployed multiprocessing to use as many cores as possible and make the calculation as fast as possible. Special attention was given to using only NumPy's methods as they are compiled in C and thus efficient.
 
-Some kernels (especially GWWL) were still too slow even with these tricks, so we decided to recreate them in C++, which is significantly faster than Python due to its compiled nature. Furthermore, we also moved the outer loop (computing the gram matrix) in the C++ module to benefit from native multithreading and avoid any useless back and forth between Python and our module. Finally, we implemented a common cache system to reduce computation.
+Some kernels (especially GWWL) were still too slow even with these tricks, so we decided to recreate them in C++, which is significantly faster than Python due to its compiled nature. Furthermore, we also moved the outer loop (computing the gram matrix) in the C++ module to benefit from native multithreading and avoid any useless back and forth between Python and our module. Finally, we implemented a caching system to avoid re-computing embeddings.
 
 \subsection{The Code}
-Our complete project is published on GitHub and can be cloned at the following address: ``https://github.com/RSLLES/KernelMethodsDataChallenge''.
+Our complete project is published on GitHub and can be accessed at \url{https://github.com/RSLLES/KernelMethodsDataChallenge}.
 \section{SVC}
 
-Louis
+The implemented Support Vector Classifier solves the dual of the C-SVC problem with hinge loss: given $n$ observations $x_i$ and labels $y_i$ and a kernel $K$, the primal problem is to find a function $f$ in $\mathcal{H}$ the RKHS of $K$ such that
 
+\begin{equation}
+    \label{eq:primal_svc}
+    \begin{split}
+        \min_{f, b, \xi_i} & \frac{1}{2} \norm{f}_\mathcal{H}^2 + C\sum_i \xi_i\\
+        \text{s.t.} & y_i\left( f(x_i) + b \right) \geq 1 - \xi_i\\
+                    & \xi_i \geq 0
+    \end{split}
+\end{equation}
+
+where $\xi_i$ represents the margin and $b$ some constant offset.
+The problem formulates the separation of classes $y = \pm 1$ in $\mathcal{H}$ by the $f(x) + b = 0$ hyperplane in the RKHS by minimizing the hinge loss $\max\left(0, 1 - y_i\left(f(x_i) + b\right)\right)$.
+The margin $\xi_i$ is a slack variable that allows the model to do some misclassification because learning a very complex separation boundary in the RKHS leads to overfitting: regularization helps retaining generality.
+
+The dual problem of~\ref{eq:primal_svc} involves the pairwise kernel matrix $\tilde{K}$ :
+
+\begin{equation}
+    \label{eq:dual_svc}
+    \begin{split}
+        \min_{\alpha} & \frac{1}{2} \alpha^T M \alpha - \sum_i \alpha_i\\
+        \text{s.t.} & \alpha^T y = 0\\
+                    & \tilde{C} - \tilde{A}\alpha \geq 0\\
+        \text{where} & M = \text{diag}(y) \tilde{K} \text{diag}(y)\\
+                     & \tilde{C} = \begin{pmatrix} C & \dots & C & 1 & \dots & 1 \end{pmatrix}^T \text{ (vector of size }2n \text{)}\\
+                     & \tilde{A} = \begin{pmatrix} I_n \\ -I_n \end{pmatrix}
+    \end{split}
+\end{equation}
+
+where $\alpha$ (vector of size $n$) represents the dual variables.
+
+We solve the dual problem, which is convex (a quadratic program) using the \texttt{cvxpy} package which contains a symbolic interface and solvers for many types of convex problems.
+We focused our development efforts towards producing a similar interface to the \texttt{scikit-learn} interface for most classifiers.
+Indeed, although we did not use \texttt{scikit-learn} to perform any prediction for the challenge, we used it to validate our implementation of SVC through unit tests: our end-to-end tests require our implementation to output exactly the same results as \texttt{scikit-learn}'s implementation on some toy data.
+Once our implementation was validated on simple examples, we could safely perform predictions with graph kernels applied on the challenge's data.
+Given the fact that this is significantly more computationally intensive, this testing step was crucial to ensure our resources were well invested.
 
 \section{Kernels}
 
 The literature on graph kernels is vast and constantly evolving due to active research and development. To begin our work, we reviewed the literature and explored state-of-the-art kernel techniques for the current solution. Considering its recent good performance,
-we chose to focus on variants of the Weisfeiler-Lehman kernel.
+we chose to focus on variants of the Weisfeiler-Lehman kernel\cite{weisfeilerlehman1968}.
 
 \subsection{Weisfeiler-Lehman}
 As part of our project, we implemented and experimented with the Weisfeiler-Lehman (WL) method, a graph isomorphism algorithm originally designed by Weisfeiler and Lehman in 1968. The algorithm aims to determine if two graphs are isomorphic with one-sided error.
 
 The core idea of the WL method is to repeatedly refine a partition of the vertex set, where each node's label and those of its neighbors are concatenated, sorted, and hashed to produce a new label. The hash function employed by the algorithm should be as perfect as possible, meaning that different sets of labels should never be mapped to the same new label. With each iteration, larger substructures are incorporated into the labels, allowing the algorithm to capture more complex patterns in the graph. Finally, the new graphs after each iteration can be compared using a relatively simple algorithm, as the deeper the algorithm goes, the more information is encapsulated from the neighborhood of every node.
-The following figure - extracted from the original paper - details the process.
 
-Figure \ref{fig:wlmethod} - extracted from the original paper - details the process.
+Figure~\ref{fig:wlmethod} - extracted from~\cite{shervashidze11a} - details the process.
 
 \begin{figure}[h]
     \centering
@@ -168,7 +210,7 @@ Moreover, this kernel is exceptionally computationally efficient. Indeed, all th
 A fast and straightforward approach to compare graphs would be to evaluate the frequency of their nodes.
 For each subgraph iteratively computed during the WL process,
 all of its nodes can be compared with all the nodes of another graph,
-using a Kronicker metric.
+using a Kronecker metric.
 More formally, given two graphs $G_1$ and $G_2$
 with respective nodes $\mathcal{N}_1$, $\mathcal{N}_2$, let $l(n)$
 be the label associated with the node $n$ in either $\mathcal{N}_1$ or $\mathcal{N}_2$.
@@ -180,7 +222,7 @@ Then the kernel can be formulated as:
 where $\delta_{l(n_1), l(n_2)} = 1$ \text{ if } $l(n_1) = l(n_2)$ and $0$ otherwise.
 
 This approach is known as the Weisfeiler-Lehman Subtree Kernel, and it has been widely studied in the literature.
-We proove that this kernel is positive semi-definite.
+We prove that this kernel is positive semi-definite.
 First, note that every label is an integer,
 as we use a hash function from $\mathbb N $ to $\mathbb N $.
 We embed a node $n$ with a sequence $u^{(n)}$ such that
@@ -219,7 +261,7 @@ The previous model did not take into account the labels associated with edges. T
 Previously, given a node $n$ in a graph $G$, when considering one of its neighbors $n'$, we used $l(n')$ as the label for $n'$. However, we now consider $\operatorname*{hash}(l(n'), l(\operatorname{edge}(n, n')))$, which combines the labels of the node and the edge that connects them.
 
 We found that this simple modification led to a significant improvement in retrieval performance.
-As shown in Table \ref{tab:wldepth6edge}, the average accuracy, precision, recall, F1-score, and ROCAUC increased when we applied this modification.
+As shown in Table~\ref{tab:wldepth6edge}, the average accuracy, precision, recall, F1-score, and ROCAUC increased when we applied this modification.
 
 
 \begin{table}[h]
@@ -276,7 +318,7 @@ Therefore, we tried slightly varying this kernel, based on the kernel presented 
 \end{itemize}
 
 Overall, these slight variants performed below our last baseline \emph{WL-edges-depth6}.
-Results can be found in Table \ref{tab:method_comparison_depth4}.
+Results can be found in Table~\ref{tab:method_comparison_depth4}.
 \begin{table}[h]
     \centering
     \begin{tabular}{l|llll|l}
@@ -313,7 +355,7 @@ Jensen-Shannon divergence as :
 where $M = \frac{1}{2} \left( Q + P \right)$ and $KL$ is the Kullback-Leibler divergence.
 
 After some searching, we found that the Jensen-Shannon divergence is a conditional negative function \cite{callut2011sequence}.
-Therefore, according to a theorem we found in \cite{callut2011sequence},
+Therefore, according to a theorem we found in~\cite{callut2011sequence},
 given a conditional negative function $ f : \mathcal{X} \times \mathcal{X} \to R$,
 the kernel $K : \mathcal{X} \times \mathcal{X} \to R$ defined such that:
 $\forall x, y \in \mathcal{X}, K(x, y) = \exp{(- \lambda f(x,y))}$
@@ -330,7 +372,7 @@ The attentive reader might notice that
 $H(P)$ and $H(Q)$ can be precomputed ahead of time,
 leading to a very fast implementation.
 
-The results using this kernel are shown in Table \ref{tab:jswl}. This kernel proves to be quite performant, achieving new best results during our project. Furthermore, it involved very low computation resources, making it by far the fastest kernel to achieve such good results.
+The results using this kernel are shown in Table~\ref{tab:jswl}. This kernel proves to be quite performant, achieving new best results during our project. Furthermore, it involved very low computation resources, making it by far the fastest kernel to achieve such good results.
 
 We found relatively few references surrounding this kernel, and we believe that it may be a good subject for further research since such a naive implementation gives great results.
 \begin{table}[h]
@@ -348,7 +390,7 @@ The code for this kernel is available in our repository : \texttt{kernel/JSWL.py
 
 \subsection{Wasserstein Weisfeiler-Lehman Kernels}
 
-The recent paper \cite{togninalli2019wasserstein}
+The recent paper~\cite{togninalli2019wasserstein}
 caught our attention by it's impressive performance
 on multiples up to date reviews.
 
@@ -384,7 +426,7 @@ We used an external library to compute the Wasserstein distance.
 However, the reader may keep in mind that this kernel is more
 computationally expensive than all the previous one.
 
-Table \ref{tab:wwl} presents the results we obtained using this kernel, which achieved our best performance on both Kaggle and our local validation test.
+Table~\ref{tab:wwl} presents the results we obtained using this kernel, which achieved our best performance on both Kaggle and our local validation test.
 
 \begin{table}[h]
     \centering
@@ -398,8 +440,7 @@ Table \ref{tab:wwl} presents the results we obtained using this kernel, which ac
 \end{table}
 
 \subsection{Generalized Wasserstein Weisfeiler-Lehman Kernels}
-Finally, the last kernel we work on came from an idea presented by
-\cite{schulz2022generalized}.
+Finally, the last kernel we work on came from an idea presented by \cite{schulz2022generalized}.
 It relies on the observation that the Weisfeiler-Lehman
 did not present any nuance while distinguishing labels.
 If two nodes have a different label, then they are treated as different,
