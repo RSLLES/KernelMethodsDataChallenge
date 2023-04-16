@@ -1,0 +1,7 @@
+Here is a part of my report for a data project.
+Please correct any grammatical or linguistic issue.
+You can slighlty
+changes phrases structures so it becomes correct grammatically and in the style of a report,
+but you should not add nor remove any idea in the text.
+And adapt link and add references to tables and label when necessary.
+And PLEASE Keep the latex structure intact, as I need to copy-paste in my editor.
