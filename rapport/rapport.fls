@@ -730,14 +730,24 @@ INPUT ./wwl_unfolding_trees.jpg
 INPUT wwl_unfolding_trees.jpg
 INPUT ./wwl_unfolding_trees.jpg
 INPUT ./wwl_unfolding_trees.jpg
+INPUT ./correlation.png
+INPUT ./correlation.png
+INPUT correlation.png
+INPUT ./correlation.png
+INPUT ./correlation.png
+INPUT ./corr_matrix.png
+INPUT ./corr_matrix.png
+INPUT corr_matrix.png
+INPUT ./corr_matrix.png
+INPUT ./corr_matrix.png
 INPUT ./rapport.bbl
 INPUT rapport.bbl
 INPUT ./rapport.bbl
 INPUT rapport.bbl
-INPUT c:/Program Files (x86)/texlive/2021/texmf-dist/fonts/vf/adobe/times/ptmri7t.vf
-INPUT c:/Program Files (x86)/texlive/2021/texmf-dist/fonts/tfm/adobe/times/ptmri8r.tfm
 INPUT c:/Program Files (x86)/texlive/2021/texmf-dist/fonts/vf/adobe/times/ptmb7t.vf
 INPUT c:/Program Files (x86)/texlive/2021/texmf-dist/fonts/tfm/adobe/times/ptmb8r.tfm
+INPUT c:/Program Files (x86)/texlive/2021/texmf-dist/fonts/vf/adobe/times/ptmri7t.vf
+INPUT c:/Program Files (x86)/texlive/2021/texmf-dist/fonts/tfm/adobe/times/ptmri8r.tfm
 INPUT rapport.aux
 INPUT ./rapport.out
 INPUT ./rapport.out

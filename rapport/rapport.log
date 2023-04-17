@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.23 (TeX Live 2021/W32TeX) (preloaded format=pdflatex 2022.1.11)  16 APR 2023 18:56
+This is pdfTeX, Version 3.141592653-2.6-1.40.23 (TeX Live 2021/W32TeX) (preloaded format=pdflatex 2022.1.11)  17 APR 2023 22:17
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -527,34 +527,44 @@ File: wwl_unfolding_trees.jpg Graphic file (type jpg)
 Package pdftex.def Info: wwl_unfolding_trees.jpg  used on input line 483.
 (pdftex.def)             Requested size: 252.0pt x 77.89772pt.
 [5 <./wwl_unfolding_trees.jpg>]
-Overfull \hbox (11.75095pt too wide) in paragraph at lines 530--542
- [][] 
- []
 
+LaTeX Warning: `h' float specifier changed to `ht'.
 
-Underfull \hbox (badness 2653) in paragraph at lines 553--556
+<correlation.png, id=192, 437.2335pt x 352.6776pt>
+File: correlation.png Graphic file (type png)
+<use correlation.png>
+Package pdftex.def Info: correlation.png  used on input line 563.
+(pdftex.def)             Requested size: 252.0pt x 203.27237pt.
+
+Underfull \hbox (badness 2653) in paragraph at lines 568--571
 []\OT1/ptm/m/n/10 First and most im-por-tantly, our av-er-age over cross-
  []
 
-[6] (./rapport.bbl)
-** WARNING: Ignoring useless \section in Appendix (line 613).
-[7] (./rapport.aux)
+[6 <./correlation.png>]
+<corr_matrix.png, id=206, 722.7pt x 578.16pt>
+File: corr_matrix.png Graphic file (type png)
+<use corr_matrix.png>
+Package pdftex.def Info: corr_matrix.png  used on input line 598.
+(pdftex.def)             Requested size: 252.0pt x 201.60033pt.
+ (./rapport.bbl)
+** WARNING: Ignoring useless \section in Appendix (line 642).
+[7 <./corr_matrix.png>] [8] (./rapport.aux)
 Package rerunfilecheck Info: File `rapport.out' has not changed.
-(rerunfilecheck)             Checksum: 00D1970CB69CAD60F83F176062F9AF41;3723.
+(rerunfilecheck)             Checksum: ED988E99583A0CBC9A83F24D9D0DED81;3723.
  ) 
 Here is how much of TeX's memory you used:
- 13797 strings out of 478353
- 226198 string characters out of 5842047
- 566389 words of memory out of 5000000
- 31677 multiletter control sequences out of 15000+600000
+ 13818 strings out of 478353
+ 226566 string characters out of 5842047
+ 559831 words of memory out of 5000000
+ 31692 multiletter control sequences out of 15000+600000
  439486 words of font info for 99 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
  60i,21n,63p,833b,1167s stack positions out of 5000i,500n,10000p,200000b,80000s
 {c:/Program Files (x86)/texlive/2021/texmf-dist/fonts/enc/dvips/base/8r.enc}<c:/Program Files (x86)/texlive/2021/texmf-dist/fonts/type1/public/amsfonts/cm/cmex10.pfb><c:/Program Files (x86)/texlive/2021/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi10.pfb><c:/Program Files (x86)/texlive/2021/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi5.pfb><c:/Program Files (x86)/texlive/2021/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi7.pfb><c:/Program Files (x86)/texlive/2021/texmf-dist/fonts/type1/public/amsfonts/cm/cmr10.pfb><c:/Program Files (x86)/texlive/2021/texmf-dist/fonts/type1/public/amsfonts/cm/cmr5.pfb><c:/Program Files (x86)/texlive/2021/texmf-dist/fonts/type1/public/amsfonts/cm/cmr7.pfb><c:/Program Files (x86)/texlive/2021/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb><c:/Program Files (x86)/texlive/2021/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy7.pfb><c:/Program Files (x86)/texlive/2021/texmf-dist/fonts/type1/public/amsfonts/symbols/msbm10.pfb><c:/Program Files (x86)/texlive/2021/texmf-dist/fonts/type1/urw/courier/ucrr8a.pfb><c:/Program Files (x86)/texlive/2021/texmf-dist/fonts/type1/urw/times/utmb8a.pfb><c:/Program Files (x86)/texlive/2021/texmf-dist/fonts/type1/urw/times/utmr8a.pfb><c:/Program Files (x86)/texlive/2021/texmf-dist/fonts/type1/urw/times/utmri8a.pfb>
-Output written on rapport.pdf (7 pages, 423364 bytes).
+Output written on rapport.pdf (8 pages, 717453 bytes).
 PDF statistics:
- 291 PDF objects out of 1000 (max. 8388607)
- 249 compressed objects within 3 object streams
- 76 named destinations out of 1000 (max. 500000)
- 187 words of extra memory for PDF output out of 10000 (max. 10000000)
+ 309 PDF objects out of 1000 (max. 8388607)
+ 261 compressed objects within 3 object streams
+ 79 named destinations out of 1000 (max. 500000)
+ 197 words of extra memory for PDF output out of 10000 (max. 10000000)
 

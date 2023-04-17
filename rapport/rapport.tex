@@ -505,7 +505,8 @@ To address this issue, we developed a Python module compiled in C++ in the \text
 
 However, we were not able to achieve this on time to submit our results on Kaggle.
 The performance of this kernel can be found in Table \ref{tab:gwwl}.
-Surprisingly, the results indicate lower scores across all metrics than the Wasserstein Weisfeiler-Lehman Kernel.
+Surprisingly, the results indicate slightly lower scores than the Wasserstein Weisfeiler-Lehman Kernel,
+while this kernel achieves a stunning score of \emph{90.169\%} on Kaggle as shown in Table \ref{tab:summary}.
 
 \begin{table}[h]
     \centering
@@ -523,32 +524,46 @@ The implementation is split between \texttt{kernel/GWWL.py} for the Python part 
 \section{Results and discussions}
 
 \subsection{Summary}
-All our results are summarized in Table \ref{tab:summary}.
+The results of our data project are presented in Table \ref{tab:summary}, which includes the public score computed after submitting on Kaggle.
+\emph{Our GWWL method achieved the best overall public score on the leaderboard.}
+Unfortunately, this submission was made after the competition deadline
+and therefore was not taken into account during the competition.
 
-\begin{table}[htbp]
+\begin{table*}[h]
     \centering
-    \begin{tabular}{l||rrrr|r}
-        Method (depth) & Accuracy & Precision & Recall & F1     & ROCAUC \\
+    \begin{tabular}{l||cccc|c|c}
+        Method (depth) & Accuracy & Precision & Recall & F1              & ROCAUC          & Public Score (Kaggle)  \\
         \hline
-        WWL (3)        & 93.9\%   & 87\%      & 39.8\% & 54.5\% & 91.8\% \\
-        JSWL (6)       & 93.4\%   & 87.5\%    & 33.8\% & 48.6\% & 91.8\% \\
-        GWWL (4)       & 93.7\%   & 83.3\%    & 39.2\% & 53.3\% & 91.6\% \\
-        WL-edges (6)   & 93\%     & 64\%      & 55.1\% & 59.2\% & 90.3\% \\
-        Min-WL (4)     & 93.2\%   & 64.9\%    & 57.8\% & 61\%   & 89.7\% \\
-        Minmax-WL (4)  & 93.3\%   & 67.1\%    & 54\%   & 59.8\% & 89.3\% \\
-        WL (5)         & 92.6\%   & 61.1\%    & 58\%   & 59.1\% & 89.3\% \\
-        Arithm-WL (4)  & 93.4\%   & 67.7\%    & 54.3\% & 60.3\% & 88.5\% \\
+        WWL (3)        & 93.9\%   & 87\%      & 39.8\% & 54.5\%          & \textbf{91.8\%} & 89.276\%               \\
+        JSWL (6)       & 93.4\%   & 87.5\%    & 33.8\% & 48.6\%          & \textbf{91.8\%} & 88.964\%               \\
+        GWWL (4)       & 93.7\%   & 83.3\%    & 39.2\% & 53.3\%          & 91.6\%          & \textbf{90.169\%}  (*) \\
+        WL-edges (6)   & 93\%     & 64\%      & 55.1\% & 59.2\%          & 90.3\%          & 85.869\%               \\
+        Min-WL (4)     & 93.2\%   & 64.9\%    & 57.8\% & \textbf{61.0\%} & 89.7\%          & 83.194\%               \\
+        Minmax-WL (4)  & 93.3\%   & 67.1\%    & 54\%   & 59.8\%          & 89.3\%          & -                      \\
+        WL (5)         & 92.6\%   & 61.1\%    & 58\%   & 59.1\%          & 89.3\%          & 81.738\%               \\
+        Arithm-WL (4)  & 93.4\%   & 67.7\%    & 54.3\% & 60.3\%          & 88.5\%          & -                      \\
     \end{tabular}
-    \caption{Summary of our results. All kernels (except \emph{WL-depth5}) use edges labels during the Weisfeiler-Lehman process.}
+    \caption{Summary of our results. All kernels (except \emph{WL-depth5}) use edges labels during the Weisfeiler-Lehman process.
+        (*) This entry was submitted on Kaggle after the challenge deadline, so it is is not taken into account during the competition.
+    }
     \label{tab:summary}
-\end{table}
+\end{table*}
 
 \subsection{On the relative importance of metrics}
 First, we would like to draw special attention to the different metrics,
 especially the correlation between the F1 score and the AUCROC.
 We used all the measures we submitted on Kaggle
 (so we could access their online public score)
-to compute the covariance matrix shown in Figure.
+to compute the correlation matrix shown in Figure \ref{fig:corrmetrics}.
+This include the measures presented in Table \ref{tab:summary} and
+other submissions.
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=\linewidth]{correlation.png}
+    \caption{Correlation matrix between scores, computed with measures taken from \ref{tab:summary} and other submissions.}
+    \label{fig:corrmetrics}
+\end{figure}
 
 First and most importantly,
 our average over cross-validation AUROC is almost perfectly correlated with the public score;
@@ -576,10 +591,23 @@ Coefficients close to 1 indicate that two kernels are generally predicting
 the same activity for the same molecule with a similar level of confidence,
 whereas those lower than 1 imply that the two kernels are "more independent",
 and hence provide different insights about the molecules.
-The correlation matrix is shown in Figure.
+The correlation matrix is shown in Figure \ref{fig:correlation}.
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=\linewidth]{corr_matrix.png}
+    \caption{Correlation matrix between kernels outputs.
+        Kernels are in the following order :
+        WWL, JSWL, GWWL, WL-edges, MinWL, MinMaxWL, WL and Arithm-WL.
+    }
+    \label{fig:correlation}
+\end{figure}
 
 As expected, since these methods perform quite well,
-there exists a strong correlation among them.
+there is a strong correlation among them
+(all coefficients are greater than $0.6$).
+Best performing methods are quite similar
+as they of course tends to provide the same results.
 
 Therefore, selecting a kernel based on its computational efficiency could be another relevant
 criterion to adopt. While these methods exhibit similar performance,
@@ -592,6 +620,7 @@ However, the selection of the criteria depends on the intended usage and resourc
 In conclusion, we are very pleased with the outcome of this project.
 It has not only strengthened our understanding of kernel methods
 but has also provided us with a deep insight into state-of-the-art Graph kernels.
+We are very proud that our GWWL method would have placed first on the leaderboard if it had been submitted on time.
 In addition, we pushed ourselves to attain a decent runtime for all our kernels;
 this was a great learning experience, and we were able to gain a wealth of knowledge in computational science.
 
