@@ -103,11 +103,13 @@ We performed cross-validation to compare the effectiveness of different kernels.
 
 For each fold in the cross-validation process, one set was separated for testing while the other five were used for training. This means that each fold involved training a Support Vector Classifier (SVC) on 83\% of the data and testing it on the remaining 17\%.
 
-Given the heaviness of the class imbalance in our dataset, we opted to use the F1 score as our primary evaluation metric. We also measured accuracy, precision, and recall for informational purposes. However, we mainly relied on the ROCAUC to evaluate the performance of our project, as it was the metric chosen to rank the leaderboard on Kaggle.
+Given the heaviness of the class imbalance in our dataset,
+we opted to track the F1 score metric. We also measured accuracy, precision, and recall for informational purposes.
+However, we mainly relied on the ROCAUC to evaluate the performance of our project, as it was the metric chosen to rank the leaderboard on Kaggle.
 
 Table \ref{tab:example} shows the results of our tests for one kernel.
 Similar output tables for all tested kernels are store in the \texttt{results/} directory,
-and all our results are available in the \ref{appendix:allresults}.
+and all our results are available in the Appendix \ref{appendix:allresults}.
 
 \begin{table}[h]
     \centering
@@ -123,7 +125,7 @@ and all our results are available in the \ref{appendix:allresults}.
         \hline
         Average & 91.3\%   & 55.1\%    & 64.5\% & 58.0\% & 89.0\% \\
     \end{tabular}
-    \caption{Example of the output table for one of the tested kernels, \emph{WL-depth4}.}
+    \caption{Example of the output table for one of the tested kernels, \emph{WL-depth4} \ref{tab:wwl}.}
     \label{tab:example}
 \end{table}
 
@@ -145,10 +147,11 @@ and a lighter operation between those two embeddings (similar to the inner produ
 Given the pipeline before, with one subset of graphs (resp. two) of size
 $n$ (resp. $n,m$), one can see that the heavy method $\phi$ can only be called
 $n$ (resp $n+m$) times at the beginning,
-while the lighter dot product will be called to fill the Gram matrix
+while the lighter operation will be called to fill the Gram matrix
 - only its upper-triangular part in the one-subset case -
-which leads to $n(n+1)/2$ operations (resp $n*m$) times.
-Separating these operations drastically increases performance as it decreases the program's complexity
+which leads to $n(n+1)/2$ operations (resp $n*m$).
+Separating these operations drastically increases performance
+as it decreases the program's complexity
 by one degree.
 
 Finally, we deployed multiprocessing to use as many cores as possible and make the calculation as fast as possible. Special attention was given to using only NumPy's methods as they are compiled in C and thus faster than Python's inherent operations.
@@ -159,7 +162,9 @@ Some kernels (especially the Generalized Wasserstein Weisfeiler-Lehman) were sti
 Our complete project is published on GitHub and can be accessed at \url{https://github.com/RSLLES/KernelMethodsDataChallenge}.
 \section{Support Vector Classifier (SVC)}
 
-The implemented Support Vector Classifier solves the dual of the C-SVC problem with hinge loss: given $n$ observations $x_i$ and labels $y_i$ and a kernel $K$, the primal problem is to find a function $f$ in $\mathcal{H}$ the RKHS of $K$ such that
+The implemented Support Vector Classifier solves the dual of the C-SVC problem with hinge loss:
+given $n$ observations $x_i$ and labels $y_i$ and a kernel $K$,
+the primal problem is to find a function $f$ in $\mathcal{H}$ the RKHS of $K$ such that
 
 \begin{equation}
     \label{eq:primal_svc}
@@ -303,7 +308,7 @@ with \texttt{edges\_labels = True}.
 
 \subsection{Weisfeiler-Lehman variants}
 Since the Weisfeiler-Lehman Subtree Kernel is based on a relatively simple update scheme,
-we believe that is room for improvements in this area.
+we believe that there is room for improvements in this area.
 
 To begin with, we note that the previous version of the Weisfeiler-Lehman Subtree Kernel can be reformulated
 as a Vertex Histogram Kernel. Indeed,
@@ -369,7 +374,7 @@ We were now facing the question of comparing two probability measures.
 The first idea that came into our mind was to use Kullback-Leibler divergence.
 Unfortunately, this divergence is not symmetric and therefore cannot be used as a kernel.
 However during our research, we found the Jensen-Shannon divergence,
-that is smooth and symmetric version of the Kullback-Leibler divergence ~\cite{callut2011sequence}.
+that is a smooth and symmetric version of the Kullback-Leibler divergence ~\cite{callut2011sequence}.
 
 Given two probabilty distribution $P$ and $Q$, we denote their
 Jensen-Shannon divergence as :
@@ -438,11 +443,19 @@ Using this process, one can create a matrix $D$ of shape
 $(\# \mathcal{N}_1, \# \mathcal{N}_2)$
 where $[D]_{i,j}$ stores the distance in the sense given above between a node from
 $G_1$ and a node from $G_2$.
-It should be noted that the coefficients in $D$ belong to the interval $[0,1]$, meaning that a distance of $[D]{i,j} = 1$ indicates that the two graphs are recognized as different from the beginning of the process (meaning they do not have the same base label), whereas a distance of $[D]{i,j} = 0$ means that the two graphs presented the same label during the $d$ steps of the Weisfeiler-Lehman process, indicating that they have the same surrounding neighborhood up to a depth of $d$. A distance $[D]{i,j}$ between 0 and 1 indicates that the two nodes were similar at some point,
+It should be noted that the coefficients in $D$ belong to the interval $[0,1]$,
+meaning that a distance of $[D]_{i,j} = 1$ indicates that the two graphs are recognized as
+different from the beginning of the process (meaning they do not have the same base label),
+whereas a distance of $[D]_{i,j} = 0$ means that the two graphs presented the same label
+during the $d$ steps of the Weisfeiler-Lehman process,
+indicating that they have the same surrounding neighborhood up to a depth of $d$.
+A distance $[D]_{i,j}$ between 0 and 1 indicates that the two nodes were similar at some point,
 but differences were found during the process.
 
-Finally, this matrix can be considered as a distance matrix related to the optimal transport problem. Therefore, a natural metric to consider is the Wasserstein distance, which uses the matrix as input distance between two uniform histograms.
-As a quick reminder, the Wasserstein distance can be computed by solving an LP program: ~\cite{togninalli2019wasserstein}
+Finally, this matrix can be considered as a distance matrix related to the optimal
+transport problem. Therefore, a natural metric to consider is the Wasserstein distance,
+which uses the distance matrix $D$ as the input distance between two uniform histograms.
+As a quick reminder, the Wasserstein distance can be computed by solving a LP program: ~\cite{togninalli2019wasserstein}
 
 \begin{equation*}
     w = \underset{P \in \Gamma}{\operatorname*{min}} \left< P \; | \; D \right>
@@ -456,7 +469,7 @@ This theory links the optimal transport theory with graph similarity, a process 
 The code for this kernel is available in our repository : \texttt{kernel/WWL.py}.
 We used an external library to compute the Wasserstein distance.
 However, the reader may keep in mind that this kernel is more
-computationally expensive than all the previous one.
+computationally expensive than all the previous ones.
 
 Table~\ref{tab:wwl} presents the results we obtained using this kernel, which achieved our best performance on both Kaggle and our local validation test.
 
@@ -486,12 +499,12 @@ An illustration of this representation is given in Figure \ref{fig:unfolding} - 
 \end{figure}
 
 
-It is worth noting that, with this unfolding tree representation of a node using the Weisfeiler-Lehman process, the standard Weisfeiler-Lehman kernel would assign a distance of 1 between two unfolding trees if and only if they are isomorphic. To introduce some nuance, the authors proposed computing the tree edit distance between two trees and using this as a distance measure between two nodes.
+It is worth noting that, with this unfolding tree representation of a node using the Weisfeiler-Lehman process, the standard Weisfeiler-Lehman kernel would assign a distance of 1 between two unfolding trees if and only if they are isomorphic. To introduce some nuance, the authors proposed to compute the tree edit distance between two trees and using this as a distance measure between two nodes.
 
 The tree edit distance between two trees is the minimal number of operations needed to transform one tree into the other. We consider three different operations: insertion, deletion, and relabeling. While different weights might be given to each operation, the most common approach endows all of them with a uniform weight of 1.
 
-This strategy gives a distance matrix that, according to the authors, reflects more the similarity of nodes than the previous binary decision. The same process is then applied to this distance matrix as for the standard Wasserstein Weisfeiler-Lehman kernel: the matrix is conditionally negative definite, and therefore the kernel $exp(- \lambda w)$,
-where w is the Wasserstein distance computed from this distance matrix, is a positive definite kernel.
+This strategy gives a distance matrix that, according to the authors, reflects more the similarity in between nodes than the previous binary decision. The same process is then applied to this distance matrix as for the standard Wasserstein Weisfeiler-Lehman kernel: the matrix is conditionally negative definite, and therefore the kernel $exp(- \lambda w)$,
+where $w$ is the Wasserstein distance computed from this distance matrix, is a positive definite kernel.
 
 Unfortunately, calculating the tree edit distance is a very computationally expensive task.
 The state-of-the-art algorithm - Masek and Paterson \cite{masek1980faster}- have worst case runtime of $O(nm/ \log nm)$,
@@ -499,7 +512,7 @@ with $m$ and $n$ being the number of nodes of the two unfolding trees,
 which is proportional to the number of node and edges in the graph and grows exceptionally with depth.
 This is still insufficient for practical applications.
 A naïve implementation in Python,
-even using multiprocessing and all the previously discussed optimization solutions, shows a runtime superior to a month.
+even using multiprocessing and all the previously discussed optimization solutions, shows a runtime superior to a month on our laptops.
 
 To address this issue, we developed a Python module compiled in C++ in the \texttt{treeEditDistance} folder that computes this kernel. Using OpenMP for multithreading, the standard library implementation of trees, a cache system, and state-of-the-art code to compute the Wasserstein distance, we managed to drop the runtime to 24 hours for a depth of $4$.
 
